@@ -10,7 +10,7 @@ the version of python you'd like to set up for this environment
 `conda activate envName`
 
 ### to install in this env:
-now whatever you `pip install` or `conda install` will live only in this environment
+activate the env, and then `pip install` or `conda install` will live only in this environment
 
 
 ### point cloud rendering
