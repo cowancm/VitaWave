@@ -20,4 +20,14 @@ now whatever you `pip install` or `conda install` will live only in this environ
 imports
 - open3d
 - numpy
+- keyboard
+- pyserial
+
+### making a conda env called sdp that holds these dependencies:
+`conda create sdp python=3.12`
+`conda activate sdp`
+`pip install open3d numpy keyboard pyserial`
+
+in whatever editor/context you are in, you will need to activate to be in the environment
+
 
