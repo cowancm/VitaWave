@@ -8,6 +8,7 @@ using FluentAssertions;
 using ModuleControl.Parsing;
 using ModuleControl.Parsing.TLVs;
 using ModuleControl.Communication;
+using Xunit.Sdk;
 
 namespace ModuleControl.Tests
 {
@@ -15,17 +16,17 @@ namespace ModuleControl.Tests
     {
         private readonly string _sampleDataPath;
         int[] MAGIC_WORD = { 2, 1, 4, 3, 6, 5, 8, 7 };
+        string _sampleDataFolderName = "SampleData";
 
         public FrameParserTests()
         {
-            _sampleDataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SampleData");
+            _sampleDataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _sampleDataFolderName);
         }
 
-        [Fact]
+        [Fact] //currently this fails. For some reason half of the sample data is filled with 0s
         public void AllSampleDataFiles_ShouldParseSuccessfully()
         {
-            List<(Event?, byte[])> values = new List<(Event?, byte[])>();
-            var count = 0;
+            List<(Event?, byte[], string)> values = new List<(Event?, byte[], string)>(); //Way to keep track of our events/bytes/fileName in debug
 
             // arrange
             var sampleFiles = Directory.GetFiles(_sampleDataPath, "output*.bin");
@@ -38,14 +39,16 @@ namespace ModuleControl.Tests
 
                 var fileBytes = File.ReadAllBytes(filePath).AsSpan();
                     
-                // The first 8 bytes should be the magic word
+                // the first 8 bytes should be the magic word
                 IsMagicWordDetected(fileBytes.Slice(0, 8)).Should().BeTrue();
 
+                // the next 32 should be the rest of the header
                 var headerBytes = fileBytes.Slice(8, 32);
                 var header = FrameParser.CreateFrameHeader(headerBytes);
-
                 header.NumTLVs.Should().BeGreaterThan(0);
 
+
+                //we want to now read after the magicword/header, packet length includes the header as well
                 var headerOffset =  40;
                 var tlvBytes = fileBytes.Slice(headerOffset, (int) header.TotalPacketLength - headerOffset);
 
@@ -53,16 +56,22 @@ namespace ModuleControl.Tests
                 var evt = FrameParser.CreateEvent(tlvBytes, header);
                 var bytes = new byte[header.TotalPacketLength];
                 fileBytes.CopyTo(bytes);
-                values.Add((evt, bytes));
-
-                if (evt is null)
-                    count++;
+                values.Add((evt, bytes, fileName));
             }
 
-            var allThatIsNull = values.Where(x => x.Item1 == null).ToList();
-            var allThatIsNotNull = values.Where(x => x.Item1 != null).ToList();
+            //this is me debugging here
+            var allThatIsNull = values
+                                .Where(x => x.Item1 == null)
+                                .OrderBy(x => x.Item3)
+                                .ToList();
 
-            count.Should().Be(0);
+            var allThatIsNotNull = values.Where(x => x.Item1 != null)
+                                         .OrderBy(x => x.Item3)
+                                         .ToList();
+
+            (allThatIsNotNull.Count + allThatIsNull.Count).Should().Be(sampleFiles.Count()); 
+
+            allThatIsNull.Count.Should().Be(0);
         }
 
         private bool IsMagicWordDetected(Span<byte> possibleMagicWord)

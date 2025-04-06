@@ -1,23 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Text;
 using System.IO.Ports;
-using System.Threading;
-using System.Threading.Tasks;
 using ModuleControl.Parsing;
 using ModuleControl.Parsing.TLVs;
-using System.Text;
-using System.IO;
+using ModuleControl.Utils;
+using ModuleControl.Interfaces;
 
 namespace ModuleControl.Communication
 {
-    public sealed class ModuleIO : IDisposable
+    public sealed class ModuleIO : IModuleIO
     {
         #region Singleton Implementation
         private static readonly Lazy<ModuleIO> _instance = new Lazy<ModuleIO>(() => new ModuleIO());
-
         public static ModuleIO Instance => _instance.Value;
 
-        // Private constructor ensures singleton pattern
         private ModuleIO()
         {
             _pollSerialTask = Task.CompletedTask;
@@ -38,33 +33,28 @@ namespace ModuleControl.Communication
         #region Fields
         private SerialPort? _dataPort;
         private SerialPort? _cliPort;
-        private bool _disposed = false;
         private Task _pollSerialTask;
         private CancellationTokenSource? _pollCancellationSource;
 
-        private static readonly int[] MAGIC_WORD = { 2, 1, 4, 3, 6, 5, 8, 7 };
         private const int DATA_BAUD_RATE = 921600;
         private const int CLI_BAUD_RATE = 115200;
-        private const int FULL_HEADER_SIZE = 40;
+
         #endregion
 
         #region Initialization and Port Management
-        public void Initialize(string dataPortName, string cliPortName)
-        {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(ModuleIO));
 
+        /// <summary>
+        /// Initializes ports. Closes everything if still running. Needs to be ran before starting (first or again).
+        /// </summary>
+        /// <param name="dataPortName"></param>
+        /// <param name="cliPortName"></param>
+        /// <exception cref="InvalidOperationException"></exception>
+        public void InitializePorts(string dataPortName, string cliPortName)
+        {
             Stop();
 
             DataPortName = dataPortName;
             CliPortName = cliPortName;
-
-            InitPorts();
-        }
-
-        public void InitPorts()
-        {
-            ClosePorts(); //close anything that could be open
 
             if (string.IsNullOrEmpty(DataPortName) || string.IsNullOrEmpty(CliPortName))
                 throw new InvalidOperationException("Port names must be set before initializing ports");
@@ -86,13 +76,30 @@ namespace ModuleControl.Communication
             {
                 _dataPort.Open();
                 _cliPort.Open();
-                _disposed = false;
             }
             catch (Exception ex)
             {
                 ClosePorts();
                 throw new InvalidOperationException($"Failed to open serial ports: {ex.Message}", ex);
             }
+        }
+
+        public bool? TrySendConfig()
+        {
+            string[] configLines;
+
+            try
+            {
+                var configFilePath = AppDomain.CurrentDomain.BaseDirectory; //Config files will just go in root
+                var sampleFile = Directory.GetFiles(configFilePath, "*.cfg").Single();
+                configLines = File.ReadAllLines(sampleFile);
+            }
+            catch 
+            {
+                return null;
+            }
+
+            return TryWriteConfigFile(configLines);
         }
 
         private void ClosePorts()
@@ -120,21 +127,15 @@ namespace ModuleControl.Communication
         #endregion
 
         #region Start and Stop
-        public bool Start()
+        public bool StartDataPolling()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(ModuleIO));
-
-            if (_dataPort == null || !_dataPort.IsOpen || _cliPort == null || !_cliPort.IsOpen)
+            if (_dataPort == null || !_dataPort.IsOpen)
                 return false;
 
             if (IsRunning)
-                return true; // Already running
+                return true;
 
-            // Create a new cancellation token source
             _pollCancellationSource = new CancellationTokenSource();
-
-            // Start the polling task
             _pollSerialTask = Task.Run(() => PollSerial(_pollCancellationSource.Token));
 
             return true;
@@ -142,7 +143,6 @@ namespace ModuleControl.Communication
 
         public void Stop()
         {
-            // Cancel the polling task first
             if (_pollCancellationSource != null && !_pollCancellationSource.IsCancellationRequested)
             {
                 _pollCancellationSource.Cancel();
@@ -164,7 +164,6 @@ namespace ModuleControl.Communication
                     _pollCancellationSource = null;
                 }
             }
-
             ClosePorts();
         }
         #endregion
@@ -174,68 +173,56 @@ namespace ModuleControl.Communication
         {
             var queue = new Queue<int>();
 
-            try
+            while (!cancellationToken.IsCancellationRequested)
             {
-                while (!cancellationToken.IsCancellationRequested && _dataPort != null && _dataPort.IsOpen)
+                try
                 {
-                    try
+                    if (_dataPort!.BytesToRead >= 4)
                     {
-                        if (_dataPort.BytesToRead > 0)
+                        int byteValue = _dataPort.ReadByte();
+                        queue.Enqueue(byteValue);
+
+                        if (queue.Count > TLV_Constants.MAGIC_WORD.Length)
                         {
-                            int byteValue = _dataPort.ReadByte();
-                            queue.Enqueue(byteValue);
-
-                            if (queue.Count > MAGIC_WORD.Length)
-                            {
-                                queue.Dequeue();
-                            }
-
-                            if (IsMagicWordDetected(queue))
-                            {
-                                queue.Clear();
-                                ProcessFrame();
-                            }
+                            queue.Dequeue();
                         }
-                        else
+
+                        if (IsMagicWordDetected(queue)) //theres probably a slightly more efficient way than checking each 8 bytes, but this is drops in the bucket
                         {
-                            Thread.Sleep(5);
+                            queue.Clear();
+                            ProcessFrame();
                         }
                     }
-                    catch (OperationCanceledException)
+                    else
                     {
-                        break;
-                    }
-                    catch (Exception ex) when (ex is IOException ||
-                                ex is TimeoutException ||
-                                ex is InvalidOperationException ||
-                                ex is UnauthorizedAccessException)
-                    {
-                        OnConnectionLost?.Invoke(this, EventArgs.Empty);
-                        ClosePorts();
-                        break;
+                        Thread.Sleep(2);
                     }
                 }
-            }
-            finally
-            {
-                // If we exited due to an error (not cancellation), make sure we notify
-                if (!cancellationToken.IsCancellationRequested && !_disposed)
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex) when (ex is IOException ||
+                            ex is TimeoutException ||
+                            ex is InvalidOperationException ||
+                            ex is UnauthorizedAccessException)
                 {
                     OnConnectionLost?.Invoke(this, EventArgs.Empty);
                     ClosePorts();
+                    break;
                 }
             }
         }
 
         private bool IsMagicWordDetected(Queue<int> possibleMagicWord)
         {
-            if (possibleMagicWord.Count < MAGIC_WORD.Length)
+            if (possibleMagicWord.Count < TLV_Constants.MAGIC_WORD.Length)
                 return false;
 
             int i = 0;
             foreach (var value in possibleMagicWord)
             {
-                if (value != MAGIC_WORD[i])
+                if (value != TLV_Constants.MAGIC_WORD[i])
                     return false;
                 i++;
             }
@@ -244,30 +231,33 @@ namespace ModuleControl.Communication
 
         private void ProcessFrame()
         {
+            Thread.CurrentThread.Priority = ThreadPriority.Highest;
+
             if (_dataPort == null || !_dataPort.IsOpen)
                 return;
 
             try
             {
-                var bytesForRestOfHeader = FULL_HEADER_SIZE - MAGIC_WORD.Length; // 32
+                var bytesForRestOfHeader = TLV_Constants.FULL_FRAME_HEADER_SIZE - TLV_Constants.MAGIC_WORD.Length; // 32
                 var restOfHeader = new byte[bytesForRestOfHeader];
 
-                int bytesRead = _dataPort.Read(restOfHeader, 0, bytesForRestOfHeader);
+                int bytesRead = _dataPort.ReadExact(restOfHeader, 0, bytesForRestOfHeader);
+
                 if (bytesRead < bytesForRestOfHeader)
                 {
                     return;
                 }
 
                 var frameHeader = FrameParser.CreateFrameHeader(restOfHeader);
-                var nextBytesToRead = frameHeader.TotalPacketLength - FULL_HEADER_SIZE;
+                var nextBytesToRead = frameHeader.TotalPacketLength - TLV_Constants.FULL_FRAME_HEADER_SIZE;
 
-                if (nextBytesToRead <= 0 || nextBytesToRead > 1024 * 1024) //safety
+                if (nextBytesToRead <= 0 || nextBytesToRead > 50000) //There should never be this much data in a single frame, if there is, throw it out
                 {
                     return;
                 }
 
                 var tlvBuffer = new byte[nextBytesToRead];
-                bytesRead = _dataPort.Read(tlvBuffer, 0, tlvBuffer.Length);
+                bytesRead = _dataPort.ReadExact(tlvBuffer, 0, tlvBuffer.Length);
                 if (bytesRead < tlvBuffer.Length)
                 {
                     return;
@@ -302,9 +292,6 @@ namespace ModuleControl.Communication
         #region CLI Communication
         public bool TryWriteConfigFile(string[] configString)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(ModuleIO));
-
             if (_cliPort == null || !_cliPort.IsOpen)
                 return false;
 
@@ -316,10 +303,8 @@ namespace ModuleControl.Communication
                     {
                         string trimmedLine = line.Trim('\n');
                         _cliPort.WriteLine(trimmedLine);
-                        Thread.Sleep(10); // Small delay between writes
-
-                        // Consider using a logger instead of Console
-                        Console.WriteLine($"Sent to CLI: {trimmedLine}");
+                        Thread.Sleep(10);
+                        Console.WriteLine(trimmedLine);
                     }
                 }
                 return true;
@@ -330,23 +315,11 @@ namespace ModuleControl.Communication
                             ex is UnauthorizedAccessException)
             {
                 OnConnectionLost?.Invoke(this, EventArgs.Empty);
-                ClosePorts(); // Close ports on error
+                ClosePorts();
                 return false;
             }
         }
 
-        #endregion
-
-        #region IDisposable Implementation
-        public void Dispose()
-        {
-            if (_disposed)
-                return;
-
-            Stop(); // Stop will also close ports
-            _disposed = true;
-            GC.SuppressFinalize(this);
-        }
         #endregion
     }
 }

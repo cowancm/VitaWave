@@ -11,16 +11,12 @@
     <PackageReference Include="System.IO.Ports" Version="9.0.3" />
   </ItemGroup>
 
-  <ItemGroup>
-		<None Include="Communication\Configuration\**\*">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	
+	<!--copy any config files in root-->
+	<ItemGroup>
+		<None Update="..\..\*.cfg"> 
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Communication\Configuration\Ashton.cfg">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+	</ItemGroup>
 
 </Project>

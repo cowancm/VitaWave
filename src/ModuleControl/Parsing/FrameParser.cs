@@ -65,7 +65,7 @@ namespace ModuleControl.Parsing
                             resultingEvent.PresenceIndication = CreateIsPresent(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         default:
-                            throw new ArgumentException("Unknown TLV. Throw this frame out");
+                            throw new ArgumentException("Bad TLV Header");
                     }
                     indexInTlvBuffer += numBytesInThisTlv;
                     numTlvsRead++;
