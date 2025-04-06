@@ -7,28 +7,28 @@ namespace ModuleControl
     {
         static void Main(string[] args)
         {
-            using CancellationTokenSource cts = new CancellationTokenSource();
-            var coms = GetDataCliComsFromUser();
+            //using CancellationTokenSource cts = new CancellationTokenSource();
+            //var coms = GetDataCliComsFromUser();
 
-            using ModuleIO moduleIO = new ModuleIO(coms.Item1, coms.Item2, cts.Token);
-           
-            Task processingTask = Task.Run(() => moduleIO.PollSerial());
+            //using ModuleIO moduleIO = new ModuleIO(coms.Item1, coms.Item2, cts.Token);
 
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
+            //Task processingTask = Task.Run(() => moduleIO.PollSerial());
 
-            cts.Cancel();
-            try
-            {
-                processingTask.Wait();
-            }
-            catch (AggregateException ae)
-            {
-                foreach (var ex in ae.InnerExceptions)
-                {
-                    Console.WriteLine($"Exception: {ex.Message}");
-                }
-            }
+            //Console.WriteLine("Press any key to exit...");
+            //Console.ReadKey();
+
+            //cts.Cancel();
+            //try
+            //{
+            //    processingTask.Wait();
+            //}
+            //catch (AggregateException ae)
+            //{
+            //    foreach (var ex in ae.InnerExceptions)
+            //    {
+            //        Console.WriteLine($"Exception: {ex.Message}");
+            //    }
+            //}
         }
 
         public static (string, string) GetDataCliComsFromUser()

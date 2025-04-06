@@ -9,7 +9,7 @@ using static ModuleControl.Parsing.TLVs.TLV_Constants;
 
 namespace ModuleControl.Parsing
 {
-    internal static class FrameParser
+    public static class FrameParser
     {
         public static FrameHeader CreateFrameHeader(Span<byte> data)
         {
@@ -65,7 +65,7 @@ namespace ModuleControl.Parsing
                             resultingEvent.PresenceIndication = CreateIsPresent(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         default:
-                            break;
+                            throw new ArgumentException("Unknown TLV. Throw this frame out");
                     }
                     indexInTlvBuffer += numBytesInThisTlv;
                     numTlvsRead++;
