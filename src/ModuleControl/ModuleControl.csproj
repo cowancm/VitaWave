@@ -14,8 +14,9 @@
 	
 	<!--copy any config files in root-->
 	<ItemGroup>
-		<None Update="..\..\*.cfg"> 
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		<None Include="..\..\*.cfg">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>%(Filename)%(Extension)</Link>
 		</None>
 	</ItemGroup>
 

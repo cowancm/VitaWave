@@ -32,4 +32,11 @@
 	  </None>
   </ItemGroup>
 
+	<ItemGroup>
+		<None Include="..\..\*.cfg">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>%(Filename)%(Extension)</Link>
+		</None>
+	</ItemGroup>
+
 </Project>

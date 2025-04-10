@@ -57,7 +57,7 @@ namespace ModuleControl.Communication
             CliPortName = cliPortName;
 
             if (string.IsNullOrEmpty(DataPortName) || string.IsNullOrEmpty(CliPortName))
-                throw new InvalidOperationException("Port names must be set before initializing ports");
+                throw new ArgumentException("Port names must be set before initializing ports");
 
             _dataPort = new SerialPort(DataPortName, DATA_BAUD_RATE, Parity.None, 8, StopBits.One)
             {
@@ -80,6 +80,7 @@ namespace ModuleControl.Communication
             catch (Exception ex)
             {
                 ClosePorts();
+                OnConnectionLost?.Invoke(this, EventArgs.Empty);
                 throw new InvalidOperationException($"Failed to open serial ports: {ex.Message}", ex);
             }
         }
@@ -290,7 +291,13 @@ namespace ModuleControl.Communication
         #endregion
 
         #region CLI Communication
-        public bool TryWriteConfigFile(string[] configString)
+
+        public bool TryWriteConfig()
+        {
+            return TryWriteConfigFile(FileHelper.FindAndReadConfigFile());
+        }
+
+        private bool TryWriteConfigFile(string[] configString)
         {
             if (_cliPort == null || !_cliPort.IsOpen)
                 return false;

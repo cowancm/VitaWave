@@ -1,16 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Xunit;
-using Xunit.Abstractions;
-using FluentAssertions;
-using ModuleControl.Parsing;
-using ModuleControl.Parsing.TLVs;
-using ModuleControl.Communication;
-using Xunit.Sdk;
+﻿using ModuleControl.Parsing;
 
-namespace ModuleControl.Tests
+namespace ModuleControlTests.Parsing
 {
     public class FrameParserTests
     {
@@ -38,7 +28,7 @@ namespace ModuleControl.Tests
                 var fileName = Path.GetFileName(filePath);
 
                 var fileBytes = File.ReadAllBytes(filePath).AsSpan();
-                    
+
                 // the first 8 bytes should be the magic word
                 IsMagicWordDetected(fileBytes.Slice(0, 8)).Should().BeTrue();
 
@@ -49,8 +39,8 @@ namespace ModuleControl.Tests
 
 
                 //we want to now read after the magicword/header, packet length includes the header as well
-                var headerOffset =  40;
-                var tlvBytes = fileBytes.Slice(headerOffset, (int) header.TotalPacketLength - headerOffset);
+                var headerOffset = 40;
+                var tlvBytes = fileBytes.Slice(headerOffset, (int)header.TotalPacketLength - headerOffset);
 
 
                 var evt = FrameParser.CreateEvent(tlvBytes, header);
@@ -69,7 +59,7 @@ namespace ModuleControl.Tests
                                          .OrderBy(x => x.Item3)
                                          .ToList();
 
-            (allThatIsNotNull.Count + allThatIsNull.Count).Should().Be(sampleFiles.Count()); 
+            (allThatIsNotNull.Count + allThatIsNull.Count).Should().Be(sampleFiles.Count());
 
             allThatIsNull.Count.Should().Be(0);
         }
@@ -88,4 +78,3 @@ namespace ModuleControl.Tests
     }
 }
 
-       

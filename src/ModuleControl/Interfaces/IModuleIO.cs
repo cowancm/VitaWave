@@ -14,6 +14,6 @@ namespace ModuleControl.Interfaces
         public void InitializePorts(string dataPortName, string cliPortName);
         public bool StartDataPolling();
         public void Stop();
-        public bool TryWriteConfigFile(string[] configString);
+        public bool TryWriteConfig();
     }
 }
