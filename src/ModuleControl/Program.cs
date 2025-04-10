@@ -6,13 +6,14 @@ using System.IO.Ports;
 namespace ModuleControl
 {
 
-    //used purely for testing purposes... 
+    //used purely for testing purposes...
     class Program
     {
         static void Main(string[] args)
         {
             ConsoleHelpers.OutputFancyLabel();
             
+            var doWeDataLog = ConsoleHelpers.AskAboutDataLogging();
 
             var moduleIO = ModuleIO.Instance;
             var coms = ConsoleHelpers.GetComPorts();

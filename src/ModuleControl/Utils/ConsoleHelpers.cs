@@ -34,7 +34,7 @@ namespace ModuleControl.Utils
 
             var portNum_PortName = new Dictionary<string, string>();
 
-            Console.WriteLine("Select the data port: ");
+            Console.WriteLine("Current Available Ports:");
 
             foreach (string availPort in availPorts)
             {
@@ -42,6 +42,8 @@ namespace ModuleControl.Utils
                 portNum_PortName.Add(portNum, availPort);
                 Console.WriteLine($"{availPort} [{portNum}]");
             }
+            Console.WriteLine();
+            Console.WriteLine("Please select the data port.");
 
             while (true)
             {
@@ -57,7 +59,8 @@ namespace ModuleControl.Utils
                 Console.WriteLine("Invalid selection.");
             }
 
-            Console.WriteLine("Select the CLI port: ");
+            Console.WriteLine();
+            Console.WriteLine("Please select the CLI port: ");
 
             while (true)
             {
@@ -87,11 +90,24 @@ namespace ModuleControl.Utils
 
         public static bool AskAboutDataLogging()
         {
-            Console.WriteLine("Would you like to save data?");
+            Console.WriteLine("Would you like to save data? (y/n)");
+            while (true)
+            {
+                var result = Console.ReadLine()?.Trim()?.ToLower() ?? string.Empty;
 
-            //WIP
+                if (result == "y")
+                {
+                    Console.WriteLine();
+                    return true;
+                }
+                else if (result == "n")
+                {
+                    Console.WriteLine();
+                    return false;
+                }
 
-            return false;
+                Console.WriteLine("Invalid response. Press (y/n)");
+            }
         }
 
         
