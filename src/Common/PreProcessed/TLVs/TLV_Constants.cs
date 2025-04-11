@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ModuleControl.Parsing.TLVs
+﻿namespace Common.PreProcessed.TLVs
 {
     public static class TLV_Constants
     {

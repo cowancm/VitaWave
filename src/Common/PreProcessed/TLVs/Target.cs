@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace ModuleControl.Parsing.TLVs
+﻿namespace Common.PreProcessed.TLVs
 {
     public record Target
     {
