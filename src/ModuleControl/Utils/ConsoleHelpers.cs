@@ -29,8 +29,8 @@ namespace ModuleControl.Utils
             string dataPort;
             string cliPort;
 
-            var availPorts //= SerialPort.GetPortNames().ToList();
-                           = new List<string>() { "COM6", "COM31", "COM9" };
+            var availPorts = SerialPort.GetPortNames().ToList();
+                           //= new List<string>() { "COM6", "COM31", "COM9" }; //testing purposes
 
             var portNum_PortName = new Dictionary<string, string>();
 

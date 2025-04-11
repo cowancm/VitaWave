@@ -265,6 +265,7 @@ namespace ModuleControl.Communication
                 }
 
                 Task.Run(() => CreateAndNotifyFrame(tlvBuffer, frameHeader));
+                //CreateAndNotifyFrame(tlvBuffer, frameHeader); For debug.
             }
             catch (Exception)
             {

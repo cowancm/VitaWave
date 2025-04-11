@@ -6,7 +6,7 @@ namespace ModuleControl.Communication
     {
         public Event FrameEvent { get; }
 
-        public FrameEventArgs(Event frameEvent)
+        public FrameEventArgs(Event? frameEvent)
         {
             FrameEvent = frameEvent;
         }

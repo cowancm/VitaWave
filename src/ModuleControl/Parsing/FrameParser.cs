@@ -69,7 +69,6 @@ namespace ModuleControl.Parsing
             catch (Exception ex)
             {
                 resultingEvent = null;
-                Console.WriteLine(ex.ToString());
             }
 
             return resultingEvent;
@@ -188,7 +187,7 @@ namespace ModuleControl.Parsing
 
         #region Target Heights
 
-        private const int TARGET_HEIGHT_LENGTH = 9;
+        private const int TARGET_HEIGHT_LENGTH = 12;
 
         private static List<TargetHeight> CreateTargetHeights(Span<byte> data)
         {
@@ -209,11 +208,12 @@ namespace ModuleControl.Parsing
 
         private static TargetHeight CreateTargetHeight(Span<byte> data)
         {
+
             var targetHeight = new TargetHeight()
             {
-                TargetID = data[0],
-                MaxZ = MemoryMarshal.Read<float>(data.Slice(1, 4)),
-                MinZ = MemoryMarshal.Read<float>(data.Slice(5, 4))
+                TargetID = MemoryMarshal.Read<uint>(data.Slice(0, 4)),
+                MaxZ = MemoryMarshal.Read<float>(data.Slice(4, 4)),
+                MinZ = MemoryMarshal.Read<float>(data.Slice(8, 4))
             };
 
             return targetHeight;
