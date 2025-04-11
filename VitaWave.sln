@@ -3,13 +3,19 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35013.160
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModuleControl", "src\ModuleControl\ModuleControl.csproj", "{F0C50E7E-DE3A-44A2-8B3D-3047E8D94CC6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.ModuleControl", "src\ModuleControl\VitaWave.ModuleControl.csproj", "{F0C50E7E-DE3A-44A2-8B3D-3047E8D94CC6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{9E8D4B44-1AD5-4FFE-89CC-8EE673674DBE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModuleControlTests", "tests\ModuleControlTests\ModuleControlTests.csproj", "{2024F20B-32D2-4FD7-B48B-5ED73A00DD4F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.ModuleControl.Tests", "tests\ModuleControlTests\VitaWave.ModuleControl.Tests.csproj", "{2024F20B-32D2-4FD7-B48B-5ED73A00DD4F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "src\Common\Common.csproj", "{2E04378F-9FC3-468B-A2CE-5AE49ABEB272}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.Common", "src\Common\VitaWave.Common.csproj", "{2E04378F-9FC3-468B-A2CE-5AE49ABEB272}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.Client", "src\VitaWave.Client\VitaWave.Client.csproj", "{77D0AA51-C7AB-45F4-9085-955FA06AFB2D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.API", "src\VitaWave.API\VitaWave.API.csproj", "{58924BC9-2661-4F47-8C9A-1106DE40EBD5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.Data", "VitaWave.Data\VitaWave.Data.csproj", "{2ECEFFA5-3C1C-4FCA-8371-545BBD6FF77A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,6 +35,18 @@ Global
 		{2E04378F-9FC3-468B-A2CE-5AE49ABEB272}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E04378F-9FC3-468B-A2CE-5AE49ABEB272}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E04378F-9FC3-468B-A2CE-5AE49ABEB272}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77D0AA51-C7AB-45F4-9085-955FA06AFB2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77D0AA51-C7AB-45F4-9085-955FA06AFB2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77D0AA51-C7AB-45F4-9085-955FA06AFB2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77D0AA51-C7AB-45F4-9085-955FA06AFB2D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{58924BC9-2661-4F47-8C9A-1106DE40EBD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58924BC9-2661-4F47-8C9A-1106DE40EBD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58924BC9-2661-4F47-8C9A-1106DE40EBD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58924BC9-2661-4F47-8C9A-1106DE40EBD5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2ECEFFA5-3C1C-4FCA-8371-545BBD6FF77A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2ECEFFA5-3C1C-4FCA-8371-545BBD6FF77A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2ECEFFA5-3C1C-4FCA-8371-545BBD6FF77A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2ECEFFA5-3C1C-4FCA-8371-545BBD6FF77A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
