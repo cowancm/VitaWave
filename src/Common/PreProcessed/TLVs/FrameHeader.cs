@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices;
-
-namespace ModuleControl.Parsing.TLVs
+﻿namespace Common.PreProcessed.TLVs
 {
     public record FrameHeader
     {

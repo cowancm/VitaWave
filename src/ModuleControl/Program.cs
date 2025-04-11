@@ -1,7 +1,6 @@
 ﻿using ModuleControl.Communication;
-using ModuleControl.Interfaces;
+using Common.Interfaces;
 using ModuleControl.Utils;
-using System.IO.Ports;
 
 namespace ModuleControl
 {

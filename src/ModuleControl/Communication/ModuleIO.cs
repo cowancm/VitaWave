@@ -1,9 +1,9 @@
 ﻿using System.Text;
 using System.IO.Ports;
 using ModuleControl.Parsing;
-using ModuleControl.Parsing.TLVs;
 using ModuleControl.Utils;
-using ModuleControl.Interfaces;
+using Common.PreProcessed.TLVs;
+using Common.Interfaces;
 
 namespace ModuleControl.Communication
 {

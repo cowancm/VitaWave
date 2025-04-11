@@ -1,11 +1,6 @@
-﻿using ModuleControl.Parsing.TLVs;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using static ModuleControl.Parsing.TLVs.TLV_Constants;
+﻿using System.Runtime.InteropServices;
+using Common.PreProcessed.TLVs;
+using static Common.PreProcessed.TLVs.TLV_Constants;
 
 namespace ModuleControl.Parsing
 {
