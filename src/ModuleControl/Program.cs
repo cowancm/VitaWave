@@ -28,26 +28,6 @@ namespace ModuleControl
                 Thread.Sleep(200);
             }
         }
-        static void OnConnectionLost(object? sender, EventArgs e)
-        {
-            Console.WriteLine("Lost connection");
-
-            Console.WriteLine("Please press the enter key to begin connection again.");
-
-            while(Console.ReadKey().Key != ConsoleKey.Enter)
-            {
-                Thread.Sleep(200);
-            }
-
-            try
-            {
-                StartConnection();
-            }
-            catch (Exception ex)
-            {
-                OnConnectionLost(null, null);
-            }
-        }
 
         static void PrintFrame(object? sender, FrameEventArgs e)
         {
