@@ -21,7 +21,6 @@ namespace ModuleControl
             StartConnection();
 
             _moduleIO.OnFrameProcessed += PrintFrame;
-            _moduleIO.OnConnectionLost += OnConnectionLost;
 
             while(Console.ReadKey().Key != ConsoleKey.Spacebar)
             {
