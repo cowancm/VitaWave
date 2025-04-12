@@ -1,7 +1,8 @@
 ﻿using ModuleControl.Communication;
 using Common.Interfaces;
 using ModuleControl.Utils;
-using System.Reflection;
+using Serilog;
+using Serilog.Sinks.SystemConsole;
 
 namespace ModuleControl
 {
@@ -12,6 +13,11 @@ namespace ModuleControl
 
         static void Main(string[] args)
         {
+            Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Console()
+            .CreateLogger();
+
             ConsoleHelpers.OutputFancyLabel();
             
             var doWeDataLog = ConsoleHelpers.AskAboutDataLogging();
@@ -22,6 +28,7 @@ namespace ModuleControl
 
             _moduleIO.OnFrameProcessed += PrintFrame;
 
+            Console.WriteLine("Press space bar to exit.");
             while(Console.ReadKey().Key != ConsoleKey.Spacebar)
             {
                 Thread.Sleep(200);
@@ -36,9 +43,9 @@ namespace ModuleControl
 
         static void StartConnection()
         {
-            _moduleIO?.InitializePorts(COMS.Item1, COMS.Item2);
+            _moduleIO?.TryInitializePorts(COMS.Item1, COMS.Item2);
             _moduleIO?.TryWriteConfig();
-            _moduleIO?.StartDataPolling();
+            _moduleIO?.TryStartDataPolling();
         }
     }
 }

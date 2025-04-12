@@ -4,6 +4,7 @@ using ModuleControl.Parsing;
 using ModuleControl.Utils;
 using Common.PreProcessed.TLVs;
 using Common.Interfaces;
+using Serilog;
 
 namespace ModuleControl.Communication
 {
@@ -43,63 +44,42 @@ namespace ModuleControl.Communication
 
         #region Initialization and Port Management
 
-        /// <summary>
-        /// Initializes ports. Closes everything if still running. Needs to be ran before starting (first or again).
-        /// </summary>
-        /// <param name="dataPortName"></param>
-        /// <param name="cliPortName"></param>
-        /// <exception cref="InvalidOperationException"></exception>
-        public void InitializePorts(string dataPortName, string cliPortName)
+        public bool TryInitializePorts(string dataPortName = null!, string cliPortName = null!)
         {
-            Stop();
-
-            DataPortName = dataPortName;
-            CliPortName = cliPortName;
-
-            if (string.IsNullOrEmpty(DataPortName) || string.IsNullOrEmpty(CliPortName))
-                throw new ArgumentException("Port names must be set before initializing ports");
-
-            _dataPort = new SerialPort(DataPortName, DATA_BAUD_RATE, Parity.None, 8, StopBits.One)
-            {
-                WriteTimeout = 5000,
-                ReadTimeout = 1000,
-                ReadBufferSize = 4096
-            };
-
-            _cliPort = new SerialPort(CliPortName, CLI_BAUD_RATE, Parity.None, 8, StopBits.One)
-            {
-                WriteTimeout = 5000,
-                Encoding = Encoding.UTF8,
-            };
-
             try
             {
+                Stop();
+
+                if(DataPortName != null)
+                    DataPortName = dataPortName;
+
+                if(CliPortName != null)
+                    CliPortName = cliPortName;
+
+                _dataPort = new SerialPort(DataPortName, DATA_BAUD_RATE, Parity.None, 8, StopBits.One)
+                {
+                    WriteTimeout = 5000,
+                    ReadTimeout = 1000,
+                    ReadBufferSize = 8192
+                };
+
+                _cliPort = new SerialPort(CliPortName, CLI_BAUD_RATE, Parity.None, 8, StopBits.One)
+                {
+                    WriteTimeout = 5000,
+                    Encoding = Encoding.UTF8,
+                };
+
                 _dataPort.Open();
                 _cliPort.Open();
             }
             catch (Exception ex)
             {
                 ClosePorts();
-                OnConnectionLost?.Invoke(this, EventArgs.Empty);
-            }
-        }
-
-        public bool? TrySendConfig()
-        {
-            string[] configLines;
-
-            try
-            {
-                var configFilePath = AppDomain.CurrentDomain.BaseDirectory; //Config files will just go in root
-                var sampleFile = Directory.GetFiles(configFilePath, "*.cfg").Single();
-                configLines = File.ReadAllLines(sampleFile);
-            }
-            catch 
-            {
-                return null;
+                Log.Error(ex, $"TryInitializePorts() Error, ports: DATA[{DataPortName ?? "NULL"}], CLI[{CliPortName ?? "NULL"}]");
+                return false;
             }
 
-            return TryWriteConfigFile(configLines);
+            return true;
         }
 
         private void ClosePorts()
@@ -127,7 +107,7 @@ namespace ModuleControl.Communication
         #endregion
 
         #region Start and Stop
-        public bool StartDataPolling()
+        public bool TryStartDataPolling()
         {
             if (_dataPort == null || !_dataPort.IsOpen)
                 return false;
@@ -209,6 +189,7 @@ namespace ModuleControl.Communication
                 {
                     OnConnectionLost?.Invoke(this, EventArgs.Empty);
                     ClosePorts();
+                    Log.Error(ex, "PollSerial() Serial Error");
                     break;
                 }
             }
@@ -271,9 +252,9 @@ namespace ModuleControl.Communication
                 //                Task.Run(() => CreateAndNotifyFrame(tlvBuffer, frameHeader));
                 //#endif
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                // Log
+                Log.Error(e, "ProcessFrame() Error");
             }
         }
 
@@ -299,6 +280,7 @@ namespace ModuleControl.Communication
                     if (resultingEvent == null)
                     {
                         _old = null; //we don't send this one if the last is null
+                        Log.Error("CreateAndNotifyFrame() resultant frame is null");
                         return;
                     }
 
@@ -307,6 +289,7 @@ namespace ModuleControl.Communication
                         if (_old?.Points?.Count != resultingEvent.TargetIndices.Count)
                         {
                             _old = null; //we don't send this one if the counts don't match
+                            Log.Error("CreateAndNotifyFrame() Frame's target indices doesn't match expected number of points");
                             return;
                         }
 
@@ -323,9 +306,10 @@ namespace ModuleControl.Communication
 
                     _old = resultingEvent;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     _old = null;
+                    Log.Error(e, "CreateAndNotifyFrame() Bad Frame Exception");
                 }
             }
         }
@@ -362,7 +346,6 @@ namespace ModuleControl.Communication
                             ex is InvalidOperationException ||
                             ex is UnauthorizedAccessException)
             {
-                OnConnectionLost?.Invoke(this, EventArgs.Empty);
                 ClosePorts();
                 return false;
             }
