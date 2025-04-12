@@ -5,8 +5,6 @@ using System.Reflection;
 
 namespace ModuleControl
 {
-
-    //used purely for testing purposes...
     class Program
     {
         static ModuleIO? _moduleIO;
@@ -53,7 +51,8 @@ namespace ModuleControl
 
         static void PrintFrame(object? sender, FrameEventArgs e)
         {
-            Console.WriteLine($"Frame Recieved with points: {e.FrameEvent?.Points?.Count.ToString() ?? "No Points"}");
+            //Console.WriteLine($"Frame Recieved with points: {e.FrameEvent?.Points?.Count.ToString() ?? "No Points"}");
+            ConsoleHelpers.PrintTargetIndication(e.FrameEvent);
         }
 
         static void StartConnection()

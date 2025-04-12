@@ -81,7 +81,6 @@ namespace ModuleControl.Communication
             {
                 ClosePorts();
                 OnConnectionLost?.Invoke(this, EventArgs.Empty);
-                throw new InvalidOperationException($"Failed to open serial ports: {ex.Message}", ex);
             }
         }
 
@@ -252,8 +251,8 @@ namespace ModuleControl.Communication
                 var frameHeader = FrameParser.CreateFrameHeader(restOfHeader);
                 var nextBytesToRead = frameHeader.TotalPacketLength - TLV_Constants.FULL_FRAME_HEADER_SIZE;
 
-                if (nextBytesToRead <= 0 || nextBytesToRead > 50000) //There should never be this much data in a single frame, if there is, throw it out
-                {
+                if (nextBytesToRead <= 0 || nextBytesToRead > 5000) //There should never be this much data in a single frame, if there is, throw it out
+                { 
                     return;
                 }
 
@@ -265,7 +264,12 @@ namespace ModuleControl.Communication
                 }
 
                 Task.Run(() => CreateAndNotifyFrame(tlvBuffer, frameHeader));
-                //CreateAndNotifyFrame(tlvBuffer, frameHeader); For debug.
+
+                //#if DEBUG
+                //                CreateAndNotifyFrame(tlvBuffer, frameHeader);
+                //#else
+                //                Task.Run(() => CreateAndNotifyFrame(tlvBuffer, frameHeader));
+                //#endif
             }
             catch (Exception)
             {
@@ -273,23 +277,59 @@ namespace ModuleControl.Communication
             }
         }
 
+
+        private object _lock = new();
+        private Event? _old;
+
+        //this method is very complicated... and for good reason.
+        //basically target indices for a frame match to the points of n-1 frames. yes. it's a nightmare
+        //so now we have to hold onto the "old" frame, and when a new one comes in:
+        //firstly, we only notify with the old frame, new frame will become old frame as long as there isn't any funny business
+        //if the new one is null (something parsing wise failed), we throw out the old one
+        //if we have target indicies in the new frame, we need to match them to the old frames points, if the counts of both don't match, we throw out this new one and the old one
+        //we then ship off the old one then old becomes the new one
         private void CreateAndNotifyFrame(Span<byte> tlvBuffer, FrameHeader frameHeader)
         {
-            try
+            lock (_lock)
             {
-                var resultingEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
-
-                if (resultingEvent != null)
+                try
                 {
-                    OnFrameProcessed?.Invoke(this, new FrameEventArgs(resultingEvent));
+                    var resultingEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
+
+                    if (resultingEvent == null)
+                    {
+                        _old = null; //we don't send this one if the last is null
+                        return;
+                    }
+
+                    if (resultingEvent.TargetIndices != null)
+                    {
+                        if (_old?.Points?.Count != resultingEvent.TargetIndices.Count)
+                        {
+                            _old = null; //we don't send this one if the counts don't match
+                            return;
+                        }
+
+                        for (int i = 0; i < resultingEvent.TargetIndices.Count; i++)
+                        {
+                            _old!.Points![i].TID = resultingEvent.TargetIndices[i];
+                        }
+                    }
+
+                    if (_old != null)
+                    {
+                        OnFrameProcessed?.Invoke(this, new FrameEventArgs(_old));
+                    }
+
+                    _old = resultingEvent;
+                }
+                catch (Exception)
+                {
+                    _old = null;
                 }
             }
-            catch (Exception)
-            {
-                // Log
-            }
         }
-        #endregion
+#endregion
 
         #region CLI Communication
 

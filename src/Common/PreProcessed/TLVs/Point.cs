@@ -7,5 +7,6 @@
         public double Z { get; init; }
         public double Doppler { get; init; }
         public double Snr { get; init; }
+        public uint TID { get; set; }
     }
 }

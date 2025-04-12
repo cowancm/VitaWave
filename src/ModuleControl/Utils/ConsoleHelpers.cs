@@ -1,4 +1,6 @@
-﻿using System.IO.Ports;
+﻿using ModuleControl.Communication;
+using ModuleControl.Parsing;
+using System.IO.Ports;
 
 namespace ModuleControl.Utils
 {
@@ -107,6 +109,22 @@ namespace ModuleControl.Utils
                 }
 
                 Console.WriteLine("Invalid response. Press (y/n)");
+            }
+        }
+
+        public static void PrintTargetIndication(Event? e)
+        {
+            if (e?.Targets?.Count > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("PRESENCE DETECTED: " + $"{e.Targets.Count} TARGETS");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("NO PRESENCE DETECTED");
+                Console.ResetColor();
             }
         }
 
