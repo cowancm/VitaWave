@@ -2,7 +2,6 @@
 using Common.Interfaces;
 using ModuleControl.Utils;
 using Serilog;
-using Serilog.Sinks.SystemConsole;
 
 namespace ModuleControl
 {

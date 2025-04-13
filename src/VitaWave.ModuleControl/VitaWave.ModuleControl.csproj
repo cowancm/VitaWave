@@ -22,7 +22,7 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\Common\VitaWave.Common.csproj" />
+	  <ProjectReference Include="..\VitaWave.Common\VitaWave.Common.csproj" />
 	</ItemGroup>
 
 </Project>
