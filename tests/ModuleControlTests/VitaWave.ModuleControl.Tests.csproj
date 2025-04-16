@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ModuleControl\VitaWave.ModuleControl.csproj" />
+    <ProjectReference Include="..\..\src\VitaWave.ModuleControl\VitaWave.ModuleControl.csproj" />
   </ItemGroup>
 
   <ItemGroup>

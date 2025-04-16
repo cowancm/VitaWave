@@ -50,10 +50,10 @@ namespace ModuleControl.Communication
             {
                 Stop();
 
-                if(DataPortName != null)
+                if(dataPortName != null)
                     DataPortName = dataPortName;
 
-                if(CliPortName != null)
+                if(cliPortName != null)
                     CliPortName = cliPortName;
 
                 _dataPort = new SerialPort(DataPortName, DATA_BAUD_RATE, Parity.None, 8, StopBits.One)
