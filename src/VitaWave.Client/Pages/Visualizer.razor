@@ -1,10 +1,10 @@
 ﻿@page "/visualizer"
-@using System.Timers
 @rendermode InteractiveAuto
+@using Common.Visualizer;
 
 <div class="d-flex">
     <div style="width: 80%;">
-        <ApexChart TItem="Target"
+        <ApexChart TItem="VisualizerTarget"
         Title="Sample Data"
         XAxisType="XAxisType.Numeric"
         Options="_targetOptions"
@@ -13,7 +13,7 @@
             {
                 var color = group.First().Color ?? "#000000";
                 var status = group.First().Status ?? "Unknown";
-                <ApexPointSeries TItem="Target"
+                <ApexPointSeries TItem="VisualizerTarget"
                                  Items="group.ToList()"
                                  Name="@status"
                                  SeriesType="SeriesType.Scatter"
@@ -40,8 +40,8 @@
 </div>
 
 @code {
-    private List<Target> _targets { get; set; } = new();
-    private ApexChartOptions<Target> _targetOptions = new();
+    private List<VisualizerTarget> _targets { get; set; } = new();
+    private ApexChartOptions<VisualizerTarget> _targetOptions = new();
 
     int Abs_Max_X = 5;
     int Max_Y = 10;
@@ -62,19 +62,13 @@
             }
         };
 
-        _targets.Add(new Target { X = -3, Y = 2, Color = "#F39F18", Name = "Target A", Status = "Falling" });
-        _targets.Add(new Target { X = 2, Y = 4, Color = "#6D3F5B", Name = "Target B", Status = "Sitting" });
-        _targets.Add(new Target { X = 3, Y = 6, Color = "#1C542D", Name = "Target C", Status = "Standing" });
+        //examples
+        // _targets.Add(new VisualizerTarget { X = -3, Y = 2, Color = "#F39F18", Name = "Target A", Status = "Falling" });
+        // _targets.Add(new VisualizerTarget { X = 2, Y = 4, Color = "#6D3F5B", Name = "Target B", Status = "Sitting" });
+        // _targets.Add(new VisualizerTarget { X = 3, Y = 6, Color = "#1C542D", Name = "Target C", Status = "Standing" });
     }
 
 
 
-    public class Target
-    {
-        public int X { get; set; }
-        public int Y { get; set; }
-        public string? Color { get; set; }
-        public string? Name { get; set; }
-        public string? Status { get; set; }
-    }
+    
 }
