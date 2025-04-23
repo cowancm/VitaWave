@@ -9,5 +9,7 @@ namespace VitaWave.ModuleControl.DataAggregation
 {
     internal class DataAggregator : IDataAggregator
     {
+
+
     }
 }
