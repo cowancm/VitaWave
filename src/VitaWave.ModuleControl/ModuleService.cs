@@ -2,7 +2,7 @@
 using VitaWave.Common.Interfaces;
 using VitaWave.ModuleControl.Interfaces;
 
-namespace VitaWave.ModuleControl.Services
+namespace VitaWave.ModuleControl
 {
     internal class ModuleService : BackgroundService
     {
@@ -19,6 +19,9 @@ namespace VitaWave.ModuleControl.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+
+
+
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
     }
