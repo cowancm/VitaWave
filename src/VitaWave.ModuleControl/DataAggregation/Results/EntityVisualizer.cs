@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace VitaWave.ModuleControl.DataAggregation.Results
 {
-    internal class EntifyVisualizerPoint
+    internal class EntityVisualizer
     {
-        public required
+        public required 
         public string? Color { get; set; }
     }
 }
