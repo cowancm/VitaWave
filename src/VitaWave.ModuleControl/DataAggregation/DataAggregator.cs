@@ -5,10 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using VitaWave.ModuleControl.Interfaces;
 
-namespace VitaWave.ModuleControl.Client
+namespace VitaWave.ModuleControl.DataAggregation
 {
-    internal class SignalRClient : ISignalRClient
+    public class DataAggregator : IDataAggregator
     {
-
     }
 }
