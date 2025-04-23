@@ -1,8 +1,7 @@
-﻿using ModuleControl.Communication;
-using ModuleControl.Parsing;
-using System.IO.Ports;
+﻿using System.IO.Ports;
+using VitaWave.ModuleControl.Parsing;
 
-namespace ModuleControl.Utils
+namespace VitaWave.ModuleControl.Utils
 {
     public static class ConsoleHelpers
     {

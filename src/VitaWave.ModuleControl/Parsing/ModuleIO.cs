@@ -1,27 +1,20 @@
 ﻿using System.Text;
 using System.IO.Ports;
-using ModuleControl.Parsing;
-using ModuleControl.Utils;
-using Common.PreProcessed.TLVs;
-using Common.Interfaces;
 using Serilog;
+using VitaWave.ModuleControl.Utils;
+using VitaWave.ModuleControl.Parsing.TLVs;
+using VitaWave.Common.Interfaces;
 
-namespace ModuleControl.Communication
+namespace VitaWave.ModuleControl.Parsing
 {
     public sealed class ModuleIO : IModuleIO
     {
-        #region Singleton Implementation
-        private static readonly Lazy<ModuleIO> _instance = new Lazy<ModuleIO>(() => new ModuleIO());
-        public static ModuleIO Instance => _instance.Value;
-
-        private ModuleIO()
+        public ModuleIO()
         {
             _pollSerialTask = Task.CompletedTask;
         }
-        #endregion
 
         #region Events and Properties
-        public event EventHandler<FrameEventArgs>? OnFrameProcessed;
         public event EventHandler? OnConnectionLost;
 
         public bool IsRunning => _pollSerialTask.Status == TaskStatus.Running;
@@ -37,8 +30,8 @@ namespace ModuleControl.Communication
         private Task _pollSerialTask;
         private CancellationTokenSource? _pollCancellationSource;
 
-        private const int DATA_BAUD_RATE = 921600;
-        private const int CLI_BAUD_RATE = 115200;
+        private int DATA_BAUD_RATE = 921600;
+        private int CLI_BAUD_RATE = 115200;
 
         #endregion
 
@@ -50,10 +43,10 @@ namespace ModuleControl.Communication
             {
                 Stop();
 
-                if(dataPortName != null)
+                if (dataPortName != null)
                     DataPortName = dataPortName;
 
-                if(cliPortName != null)
+                if (cliPortName != null)
                     CliPortName = cliPortName;
 
                 _dataPort = new SerialPort(DataPortName, DATA_BAUD_RATE, Parity.None, 8, StopBits.One)
@@ -233,7 +226,7 @@ namespace ModuleControl.Communication
                 var nextBytesToRead = frameHeader.TotalPacketLength - TLV_Constants.FULL_FRAME_HEADER_SIZE;
 
                 if (nextBytesToRead <= 0 || nextBytesToRead > 5000) //There should never be this much data in a single frame, if there is, throw it out
-                { 
+                {
                     return;
                 }
 
@@ -244,13 +237,8 @@ namespace ModuleControl.Communication
                     return;
                 }
 
+                //serial thread doesn't worry about this anymore
                 Task.Run(() => CreateAndNotifyFrame(tlvBuffer, frameHeader));
-
-                //#if DEBUG
-                //                CreateAndNotifyFrame(tlvBuffer, frameHeader);
-                //#else
-                //                Task.Run(() => CreateAndNotifyFrame(tlvBuffer, frameHeader));
-                //#endif
             }
             catch (Exception e)
             {
@@ -269,67 +257,72 @@ namespace ModuleControl.Communication
         //if the new one is null (something parsing wise failed), we throw out the old one
         //if we have target indicies in the new frame, we need to match them to the old frames points, if the counts of both don't match, we throw out this new one and the old one
         //we then ship off the old one then old becomes the new one
+
+        //therefore, every frame is sent on the next call of this function
         private void CreateAndNotifyFrame(Span<byte> tlvBuffer, FrameHeader frameHeader)
         {
-            lock (_lock)
+            try
             {
-                try
-                {
-                    var resultingEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
+                var resultingEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
 
-                    if (resultingEvent == null)
+                if (resultingEvent == null)
+                {
+                    _old = null; //we don't send this one if the last is null
+                    Log.Error("CreateAndNotifyFrame() resultant frame is null");
+                    return;
+                }
+
+                if (resultingEvent.TargetIndices != null)
+                {
+                    if (_old?.Points?.Count != resultingEvent.TargetIndices.Count)
                     {
-                        _old = null; //we don't send this one if the last is null
-                        Log.Error("CreateAndNotifyFrame() resultant frame is null");
+                        _old = null; //we don't send this one if the counts don't match
+                        Log.Error("CreateAndNotifyFrame() Frame's target indices doesn't match expected number of points");
                         return;
                     }
 
-                    if (resultingEvent.TargetIndices != null)
+                    for (int i = 0; i < resultingEvent.TargetIndices.Count; i++)
                     {
-                        if (_old?.Points?.Count != resultingEvent.TargetIndices.Count)
-                        {
-                            _old = null; //we don't send this one if the counts don't match
-                            Log.Error("CreateAndNotifyFrame() Frame's target indices doesn't match expected number of points");
-                            return;
-                        }
-
-                        for (int i = 0; i < resultingEvent.TargetIndices.Count; i++)
-                        {
-                            _old!.Points![i].TID = resultingEvent.TargetIndices[i];
-                        }
+                        _old!.Points![i].TID = resultingEvent.TargetIndices[i];
                     }
-
-                    if (_old != null)
-                    {
-                        OnFrameProcessed?.Invoke(this, new FrameEventArgs(_old));
-                    }
-
-                    _old = resultingEvent;
                 }
-                catch (Exception e)
+
+                if (_old != null)
                 {
-                    _old = null;
-                    Log.Error(e, "CreateAndNotifyFrame() Bad Frame Exception");
+                    //BIG TODO: put processing logic here
                 }
+
+                _old = resultingEvent;
+            }
+            catch (Exception e)
+            {
+                _old = null;
+                Log.Error(e, "CreateAndNotifyFrame() Bad Frame Exception");
             }
         }
-#endregion
+        #endregion
 
         #region CLI Communication
 
-        public bool TryWriteConfig()
+        public bool TryWriteConfigFromFile()
         {
-            return TryWriteConfigFile(FileHelper.FindAndReadConfigFile());
+            return TryWriteConfigToModule(FileHelper.FindAndReadConfigFile());
         }
 
-        private bool TryWriteConfigFile(string[] configString)
+        public bool TryWriteConfigFromFile(string[] configStrings)
+        {
+            return TryWriteConfigToModule(configStrings);
+        }
+
+        //TODO: see if the module returns anything and base off of that, possibly wait and see if the data port has new data...?
+        private bool TryWriteConfigToModule(string[] configStrings)
         {
             if (_cliPort == null || !_cliPort.IsOpen)
                 return false;
 
             try
             {
-                foreach (var line in configString)
+                foreach (var line in configStrings)
                 {
                     if (!line.Contains('%') && !string.IsNullOrEmpty(line) && !(line == "\n"))
                     {

@@ -1,8 +1,8 @@
 ﻿using System.Runtime.InteropServices;
-using Common.PreProcessed.TLVs;
-using static Common.PreProcessed.TLVs.TLV_Constants;
+using VitaWave.ModuleControl.Parsing.TLVs;
+using static VitaWave.ModuleControl.Parsing.TLVs.TLV_Constants;
 
-namespace ModuleControl.Parsing
+namespace VitaWave.ModuleControl.Parsing
 {
     public static class FrameParser
     {

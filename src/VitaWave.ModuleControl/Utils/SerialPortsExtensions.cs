@@ -1,6 +1,6 @@
 ﻿using System.IO.Ports;
 
-namespace ModuleControl.Utils
+namespace VitaWave.ModuleControl.Utils
 {
     public static class SerialPortsExtensions
     {

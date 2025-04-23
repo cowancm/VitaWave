@@ -1,6 +1,6 @@
-﻿using Common.PreProcessed.TLVs;
+﻿using VitaWave.ModuleControl.Parsing.TLVs;
 
-namespace ModuleControl.Parsing
+namespace VitaWave.ModuleControl.Parsing
 {
     public record Event
     {

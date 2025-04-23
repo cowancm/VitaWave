@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
-using static Common.PreProcessed.TLVs.TLV_Constants;
+using static VitaWave.ModuleControl.Parsing.TLVs.TLV_Constants;
 
-namespace ModuleControl.Parsing
+namespace VitaWave.ModuleControl.Parsing
 {
     public static class TLVHeader
     {

@@ -1,7 +1,7 @@
-﻿namespace Common.PreProcessed.TLVs
-{ 
+﻿namespace VitaWave.ModuleControl.Parsing.TLVs
+{
     public record Point
-    {   
+    {
         public double X { get; init; }
         public double Y { get; init; }
         public double Z { get; init; }
