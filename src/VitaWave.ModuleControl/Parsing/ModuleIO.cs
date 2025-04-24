@@ -69,11 +69,9 @@ namespace VitaWave.ModuleControl.Parsing
             Status = State.Paused;
         }
 
-
         public State Run()
         {
             Status = State.Running;
-
             return Status;
         }
 
