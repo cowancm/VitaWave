@@ -4,75 +4,90 @@ using Serilog;
 using VitaWave.ModuleControl.Utils;
 using VitaWave.ModuleControl.Parsing.TLVs;
 using VitaWave.Common.Interfaces;
+using VitaWave.ModuleControl.Interfaces;
 
 namespace VitaWave.ModuleControl.Parsing
 {
     public sealed class ModuleIO : IModuleIO
     {
-        public ModuleIO()
+        public ModuleIO(IRuntimeSettingsManager settingsManager)
         {
-            _pollSerialTask = Task.CompletedTask;
+            _settingsManager = settingsManager;
+
+            var settings = _settingsManager.GetSettings();
+
+            if (settings != null)
+            {
+                DataPortName = settings.DataPortName;
+                CliPortName = settings.CliPortName;
+                DataBaud = settings.DataBaudRate;
+                CliBaud = settings.CliBaudRate;
+            }
+
+            Status = State.AwaitingPortInit;
         }
 
-        #region Events and Properties
         public event EventHandler? OnConnectionLost;
-
-        public bool IsRunning => _pollSerialTask.Status == TaskStatus.Running;
-        public bool IsConnected => _dataPort?.IsOpen == true && _cliPort?.IsOpen == true;
-
+        public State Status { get; private set; }
         public string? DataPortName { get; private set; }
         public string? CliPortName { get; private set; }
-        #endregion
+        public int DataBaud { get; private set; }
+        public int CliBaud { get; private set; }
 
-        #region Fields
+        private readonly IRuntimeSettingsManager _settingsManager;
         private SerialPort? _dataPort;
         private SerialPort? _cliPort;
-        private Task _pollSerialTask;
-        private CancellationTokenSource? _pollCancellationSource;
 
-        private int DATA_BAUD_RATE = 921600;
-        private int CLI_BAUD_RATE = 115200;
-
-        #endregion
-
-        #region Initialization and Port Management
-
-        public bool TryInitializePorts(string dataPortName = null!, string cliPortName = null!)
+        public void InitializePorts()
         {
             try
             {
-                Stop();
-
-                if (dataPortName != null)
-                    DataPortName = dataPortName;
-
-                if (cliPortName != null)
-                    CliPortName = cliPortName;
-
-                _dataPort = new SerialPort(DataPortName, DATA_BAUD_RATE, Parity.None, 8, StopBits.One)
+                _dataPort = new SerialPort(DataPortName, DataBaud, Parity.None, 8, StopBits.One)
                 {
                     WriteTimeout = 5000,
                     ReadTimeout = 1000,
                     ReadBufferSize = 8192
                 };
 
-                _cliPort = new SerialPort(CliPortName, CLI_BAUD_RATE, Parity.None, 8, StopBits.One)
+                _cliPort = new SerialPort(CliPortName, CliBaud, Parity.None, 8, StopBits.One)
                 {
                     WriteTimeout = 5000,
                     Encoding = Encoding.UTF8,
                 };
+
+                _dataPort.DataReceived += OnDataRecieved;
 
                 _dataPort.Open();
                 _cliPort.Open();
             }
             catch (Exception ex)
             {
-                ClosePorts();
-                Log.Error(ex, $"TryInitializePorts() Error, ports: DATA[{DataPortName ?? "NULL"}], CLI[{CliPortName ?? "NULL"}]");
-                return false;
+                Close();
+                Log.Error(ex, $"Error Initializing ports." +
+                            $"\nPorts: DATA[{DataPortName ?? "NULL"}], CLI[{CliPortName ?? "NULL"}]");
             }
+            Status = State.Paused;
+        }
 
-            return true;
+
+        public State Run()
+        {
+            Status = State.Running;
+
+            return Status;
+        }
+
+        public void Pause()
+        {
+            Status = State.Paused; //This only pasuses sending/processing new frames, serial buffers are still getting read
+        }
+
+        public State Close()
+        {
+            OnConnectionLost?.Invoke(this, EventArgs.Empty);
+            Status = State.AwaitingPortInit;
+            ClosePorts();
+            return Status;
         }
 
         private void ClosePorts()
@@ -97,104 +112,51 @@ namespace VitaWave.ModuleControl.Parsing
                 _cliPort = null;
             }
         }
-        #endregion
 
-        #region Start and Stop
-        public bool TryStartDataPolling()
+
+        Queue<int> _magicWordQueue = new Queue<int>();
+        private void OnDataRecieved(object sender, SerialDataReceivedEventArgs e)
         {
-            if (_dataPort == null || !_dataPort.IsOpen)
-                return false;
 
-            if (IsRunning)
-                return true;
-
-            _pollCancellationSource = new CancellationTokenSource();
-            _pollSerialTask = Task.Run(() => PollSerial(_pollCancellationSource.Token));
-
-            return true;
-        }
-
-        public void Stop()
-        {
-            if (_pollCancellationSource != null && !_pollCancellationSource.IsCancellationRequested)
+            try
             {
-                _pollCancellationSource.Cancel();
-                try
+                if (_dataPort!.BytesToRead >= 4)
                 {
-                    // Wait for the task to complete with a timeout
-                    if (!_pollSerialTask.IsCompleted)
+                    int byteValue = _dataPort.ReadByte();
+                    _magicWordQueue.Enqueue(byteValue);
+
+                    if (_magicWordQueue.Count > TLV_Constants.MAGIC_WORD.Length)
                     {
-                        _pollSerialTask.Wait(TimeSpan.FromSeconds(1));
+                        _magicWordQueue.Dequeue();
                     }
-                }
-                catch
-                {
-                    // Ignore exceptions during cancellation
-                }
-                finally
-                {
-                    _pollCancellationSource.Dispose();
-                    _pollCancellationSource = null;
-                }
-            }
-            ClosePorts();
-        }
-        #endregion
 
-        #region Serial Communication
-        private void PollSerial(CancellationToken cancellationToken)
-        {
-            var queue = new Queue<int>();
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    if (_dataPort!.BytesToRead >= 4)
+                    if (IsMagicWordDetected()) //theres probably a slightly more efficient way than checking each 8 bytes, but this is drops in the bucket
                     {
-                        int byteValue = _dataPort.ReadByte();
-                        queue.Enqueue(byteValue);
+                        _magicWordQueue.Clear();
 
-                        if (queue.Count > TLV_Constants.MAGIC_WORD.Length)
-                        {
-                            queue.Dequeue();
-                        }
-
-                        if (IsMagicWordDetected(queue)) //theres probably a slightly more efficient way than checking each 8 bytes, but this is drops in the bucket
-                        {
-                            queue.Clear();
+                        if (Status != State.Paused)
                             ProcessFrame();
-                        }
-                    }
-                    else
-                    {
-                        Thread.Sleep(2);
                     }
                 }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex) when (ex is IOException ||
-                            ex is TimeoutException ||
-                            ex is InvalidOperationException ||
-                            ex is UnauthorizedAccessException)
-                {
-                    OnConnectionLost?.Invoke(this, EventArgs.Empty);
-                    ClosePorts();
-                    Log.Error(ex, "PollSerial() Serial Error");
-                    break;
-                }
+            }
+            catch (Exception ex) when (ex is IOException ||
+                        ex is TimeoutException ||
+                        ex is InvalidOperationException ||
+                        ex is UnauthorizedAccessException)
+            {
+                Close();
+                Log.Error("Serial Connection Failed");
             }
         }
 
-        private bool IsMagicWordDetected(Queue<int> possibleMagicWord)
+
+        private bool IsMagicWordDetected()
         {
-            if (possibleMagicWord.Count < TLV_Constants.MAGIC_WORD.Length)
+            if (_magicWordQueue.Count < TLV_Constants.MAGIC_WORD.Length)
                 return false;
 
             int i = 0;
-            foreach (var value in possibleMagicWord)
+            foreach (var value in _magicWordQueue)
             {
                 if (value != TLV_Constants.MAGIC_WORD[i])
                     return false;
@@ -205,8 +167,6 @@ namespace VitaWave.ModuleControl.Parsing
 
         private void ProcessFrame()
         {
-            Thread.CurrentThread.Priority = ThreadPriority.Highest;
-
             if (_dataPort == null || !_dataPort.IsOpen)
                 return;
 
@@ -222,7 +182,17 @@ namespace VitaWave.ModuleControl.Parsing
                     return;
                 }
 
-                var frameHeader = FrameParser.CreateFrameHeader(restOfHeader);
+                FrameHeader? frameHeader;
+                try
+                {
+                    frameHeader = FrameParser.CreateFrameHeader(restOfHeader);
+                }
+                catch(Exception e)
+                {
+                    Log.Error(e, "Frameheader failed to be parsed.");
+                    return;
+                }
+
                 var nextBytesToRead = frameHeader.TotalPacketLength - TLV_Constants.FULL_FRAME_HEADER_SIZE;
 
                 if (nextBytesToRead <= 0 || nextBytesToRead > 5000) //There should never be this much data in a single frame, if there is, throw it out
@@ -240,16 +210,20 @@ namespace VitaWave.ModuleControl.Parsing
                 //serial thread doesn't worry about this anymore
                 Task.Run(() => CreateAndNotifyFrame(tlvBuffer, frameHeader));
             }
-            catch (Exception e)
+            catch (Exception ex) when (ex is IOException ||
+                            ex is TimeoutException ||
+                            ex is InvalidOperationException ||
+                            ex is UnauthorizedAccessException)
             {
-                Log.Error(e, "ProcessFrame() Error");
+                Close();
+                Log.Error(ex, $"Dataport has failed.");
             }
         }
 
 
-        private object _lock = new();
+        //private object _startPollingLock = new();
         private Event? _old;
-
+        private object _notifyFrameLock;
         //this method is very complicated... and for good reason.
         //basically target indices for a frame match to the points of n-1 frames. yes. it's a nightmare
         //so now we have to hold onto the "old" frame, and when a new one comes in:
@@ -261,64 +235,70 @@ namespace VitaWave.ModuleControl.Parsing
         //therefore, every frame is sent on the next call of this function
         private void CreateAndNotifyFrame(Span<byte> tlvBuffer, FrameHeader frameHeader)
         {
-            try
+            lock (_notifyFrameLock)
             {
-                var resultingEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
-
-                if (resultingEvent == null)
+                try
                 {
-                    _old = null; //we don't send this one if the last is null
-                    Log.Error("CreateAndNotifyFrame() resultant frame is null");
-                    return;
-                }
+                    var resultingEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
 
-                if (resultingEvent.TargetIndices != null)
-                {
-                    if (_old?.Points?.Count != resultingEvent.TargetIndices.Count)
+                    if (resultingEvent == null)
                     {
-                        _old = null; //we don't send this one if the counts don't match
-                        Log.Error("CreateAndNotifyFrame() Frame's target indices doesn't match expected number of points");
+                        _old = null; //we don't send this one if the last is null
+                        Log.Error("Resultant frame is null");
                         return;
                     }
 
-                    for (int i = 0; i < resultingEvent.TargetIndices.Count; i++)
+                    if (resultingEvent.TargetIndices != null)
                     {
-                        _old!.Points![i].TID = resultingEvent.TargetIndices[i];
+                        if (_old?.Points?.Count != resultingEvent.TargetIndices.Count)
+                        {
+                            _old = null; //we don't send this one if the counts don't match
+                            Log.Error("Frame target indices doesn't match expected number of points");
+                            return;
+                        }
+
+                        for (int i = 0; i < resultingEvent.TargetIndices.Count; i++)
+                        {
+                            _old!.Points![i].TID = resultingEvent.TargetIndices[i];
+                        }
                     }
-                }
 
-                if (_old != null)
+                    if (_old != null)
+                    {
+                        //BIG TODO: put processing logic here
+                    }
+
+                    _old = resultingEvent;
+                }
+                catch (Exception e)
                 {
-                    //BIG TODO: put processing logic here
+                    _old = null;
+                    Log.Error(e, "Bad Frame");
                 }
-
-                _old = resultingEvent;
-            }
-            catch (Exception e)
-            {
-                _old = null;
-                Log.Error(e, "CreateAndNotifyFrame() Bad Frame Exception");
             }
         }
-        #endregion
 
-        #region CLI Communication
-
-        public bool TryWriteConfigFromFile()
+        public State TryWriteConfigFromFile()
         {
             return TryWriteConfigToModule(FileHelper.FindAndReadConfigFile());
         }
 
-        public bool TryWriteConfigFromFile(string[] configStrings)
+        public State TryWriteConfigFromFile(string[] configStrings)
         {
             return TryWriteConfigToModule(configStrings);
         }
 
         //TODO: see if the module returns anything and base off of that, possibly wait and see if the data port has new data...?
-        private bool TryWriteConfigToModule(string[] configStrings)
+
+        int _configLineSendTimeInMs = 10;
+        private State TryWriteConfigToModule(string[] configStrings)
         {
             if (_cliPort == null || !_cliPort.IsOpen)
-                return false;
+            {
+                Close();
+                Log.Error($"CLI port failed to connect.");
+                return Status;
+            }
 
             try
             {
@@ -328,22 +308,29 @@ namespace VitaWave.ModuleControl.Parsing
                     {
                         string trimmedLine = line.Trim('\n');
                         _cliPort.WriteLine(trimmedLine);
-                        Thread.Sleep(10);
+                        Thread.Sleep(_configLineSendTimeInMs);
                         Console.WriteLine(trimmedLine);
                     }
                 }
-                return true;
             }
             catch (Exception ex) when (ex is IOException ||
                             ex is TimeoutException ||
                             ex is InvalidOperationException ||
                             ex is UnauthorizedAccessException)
             {
-                ClosePorts();
-                return false;
+                Close();
+                Log.Error(ex, $"CLI Port: [{_cliPort.PortName}] failed to connect.");
             }
+
+            return Status;
         }
 
-        #endregion
+
+        public enum State
+        {
+            AwaitingPortInit,       //We haven't started anything yet
+            Running,                //Actively waiting on events
+            Paused                  //We can start whenever
+        }
     }
 }

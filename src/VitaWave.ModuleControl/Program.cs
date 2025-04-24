@@ -7,6 +7,7 @@ using VitaWave.ModuleControl.Client;
 using VitaWave.ModuleControl.DataAggregation;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing;
+using VitaWave.ModuleControl.Settings;
 
 namespace ModuleControl
 {
@@ -20,7 +21,8 @@ namespace ModuleControl
 
             var builder = Host.CreateApplicationBuilder();
 
-            builder.Services.AddSingleton<IModuleIO, ModuleIO>()
+            builder.Services.AddSingleton<IRuntimeSettingsManager, RunTimeSettingsManager>()
+                            .AddSingleton<IModuleIO, ModuleIO>()
                             .AddSingleton<IDataAggregator, DataAggregator>()
                             .AddSingleton<ISignalRClient, SignalRClient>()
                             .AddHostedService<ModuleService>();
