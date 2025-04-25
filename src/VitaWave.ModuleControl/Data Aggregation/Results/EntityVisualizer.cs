@@ -8,7 +8,5 @@ namespace VitaWave.ModuleControl.DataAggregation.Results
 {
     internal class EntityVisualizer
     {
-        public required 
-        public string? Color { get; set; }
     }
 }

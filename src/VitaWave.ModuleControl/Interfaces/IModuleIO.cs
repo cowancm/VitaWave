@@ -1,12 +1,25 @@
-﻿namespace VitaWave.Common.Interfaces
+﻿namespace VitaWave.ModuleControl.Interfaces
 {
     public interface IModuleIO
     {
-        public event EventHandler? OnConnectionLost;
-        public bool TryInitializePorts(string dataPortName, string cliPortName);
-        public bool TryStartDataPolling();
-        public void Close();
-        public bool TryWriteConfigFromFile();
-        public bool TryWriteConfigFromFile(string[] content);
+        event EventHandler? OnConnectionLost;
+
+        State Status { get; }
+
+        void ChangePortSettings();
+        State InitializePorts();
+        State Run();
+        void Pause();
+        State Stop();
+
+        Task<State> WriteConfigFromFile();
+        Task<State> WriteConfigFromFile(string[] configStrings);
+    }
+
+    public enum State
+    {
+        AwaitingPortInit,       //We haven't started anything yet
+        Running,                //Actively waiting on events
+        Paused                  //We can start whenever
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Serilog;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using VitaWave.Common.Interfaces;
 using VitaWave.ModuleControl;
 using VitaWave.ModuleControl.Client;
 using VitaWave.ModuleControl.DataAggregation;
@@ -21,7 +20,8 @@ namespace ModuleControl
 
             var builder = Host.CreateApplicationBuilder();
 
-            builder.Services.AddSingleton<IRuntimeSettingsManager, RunTimeSettingsManager>()
+            builder.Services.AddSingleton<IRuntimeSettingsManager, RuntimeSettingsManager>()
+                            .AddSingleton<ISerialProcessor, SerialDataProcessor>()
                             .AddSingleton<IModuleIO, ModuleIO>()
                             .AddSingleton<IDataAggregator, DataAggregator>()
                             .AddSingleton<ISignalRClient, SignalRClient>()

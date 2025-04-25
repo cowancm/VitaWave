@@ -4,7 +4,7 @@ namespace VitaWave.ModuleControl.Utils
     public static class FileHelper
     {
         //yes this is AI code. it just moves up directories until it finds the first .cfg file
-        public static string[] FindAndReadConfigFile()
+        public static string[] ReadConfigFile()
         {
             string currentDirectory = Directory.GetCurrentDirectory();
 

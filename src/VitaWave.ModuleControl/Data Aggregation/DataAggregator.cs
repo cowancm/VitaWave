@@ -7,8 +7,9 @@ using VitaWave.ModuleControl.Interfaces;
 
 namespace VitaWave.ModuleControl.DataAggregation
 {
-    internal class DataAggregator : IDataAggregator
+    public class DataAggregator : IDataAggregator
     {
+
 
 
     }

@@ -1,60 +1,80 @@
 ﻿using System.Text;
 using System.IO.Ports;
+using System.Collections.Concurrent;
 using Serilog;
 using VitaWave.ModuleControl.Utils;
 using VitaWave.ModuleControl.Parsing.TLVs;
-using VitaWave.Common.Interfaces;
 using VitaWave.ModuleControl.Interfaces;
 
 namespace VitaWave.ModuleControl.Parsing
 {
     public sealed class ModuleIO : IModuleIO
     {
-        public ModuleIO(IRuntimeSettingsManager settingsManager)
+        public ModuleIO(IRuntimeSettingsManager settingsManager, ISerialProcessor serialDataProcessor)
         {
             _settingsManager = settingsManager;
+            _serialDataProcessor = serialDataProcessor;
 
-            var settings = _settingsManager.GetSettings();
-
-            if (settings != null)
-            {
-                DataPortName = settings.DataPortName;
-                CliPortName = settings.CliPortName;
-                DataBaud = settings.DataBaudRate;
-                CliBaud = settings.CliBaudRate;
-            }
-
+            ChangePortSettings();
             Status = State.AwaitingPortInit;
         }
 
         public event EventHandler? OnConnectionLost;
         public State Status { get; private set; }
-        public string? DataPortName { get; private set; }
-        public string? CliPortName { get; private set; }
-        public int DataBaud { get; private set; }
-        public int CliBaud { get; private set; }
 
-        private readonly IRuntimeSettingsManager _settingsManager;
+        private string? _dataPortName;
+        private string? _cliPortName;
+        private int _dataBaud;
+        private int _cliBaud;
         private SerialPort? _dataPort;
         private SerialPort? _cliPort;
 
-        public void InitializePorts()
+        private readonly IRuntimeSettingsManager _settingsManager;
+        private readonly ISerialProcessor _serialDataProcessor;
+
+        const int MinimumBytesForOnDataRecieved = TLV_Constants.FULL_FRAME_HEADER_SIZE;
+        const int DataBufferSizeInBytes = 16384;
+
+        public void ChangePortSettings()
         {
+            var settings = _settingsManager.GetSettings();
+
+            if (settings != null)
+            {
+                _dataPortName = settings.DataPortName;
+                _cliPortName = settings.CliPortName;
+                _dataBaud = settings.DataBaud;
+                _cliBaud = settings.CliBaud;
+            }
+            else
+            {
+                Log.Error("Serial port settings is null.");
+            }
+        }
+
+        public State InitializePorts()
+        {
+            if (Status != State.AwaitingPortInit)
+            {
+                Stop();
+            }
+
             try
             {
-                _dataPort = new SerialPort(DataPortName, DataBaud, Parity.None, 8, StopBits.One)
+                _dataPort = new SerialPort(_dataPortName, _dataBaud, Parity.None, 8, StopBits.One)
                 {
                     WriteTimeout = 5000,
                     ReadTimeout = 1000,
-                    ReadBufferSize = 8192
+                    ReadBufferSize = DataBufferSizeInBytes
                 };
 
-                _cliPort = new SerialPort(CliPortName, CliBaud, Parity.None, 8, StopBits.One)
+                _cliPort = new SerialPort(_cliPortName, _cliBaud, Parity.None, 8, StopBits.One)
                 {
                     WriteTimeout = 5000,
                     Encoding = Encoding.UTF8,
                 };
 
+                _dataPort.ReceivedBytesThreshold = MinimumBytesForOnDataRecieved;
                 _dataPort.DataReceived += OnDataRecieved;
 
                 _dataPort.Open();
@@ -62,11 +82,12 @@ namespace VitaWave.ModuleControl.Parsing
             }
             catch (Exception ex)
             {
-                Close();
+                Stop();
                 Log.Error(ex, $"Error Initializing ports." +
-                            $"\nPorts: DATA[{DataPortName ?? "NULL"}], CLI[{CliPortName ?? "NULL"}]");
+                            $"\nPorts: DATA[{_dataPortName ?? "NULL"}], CLI[{_cliPortName ?? "NULL"}]");
             }
             Status = State.Paused;
+            return Status;
         }
 
         public State Run()
@@ -80,7 +101,7 @@ namespace VitaWave.ModuleControl.Parsing
             Status = State.Paused; //This only pasuses sending/processing new frames, serial buffers are still getting read
         }
 
-        public State Close()
+        public State Stop()
         {
             OnConnectionLost?.Invoke(this, EventArgs.Empty);
             Status = State.AwaitingPortInit;
@@ -112,20 +133,24 @@ namespace VitaWave.ModuleControl.Parsing
         }
 
 
-        Queue<int> _magicWordQueue = new Queue<int>();
+        ConcurrentQueue<int> _magicWordQueue = new ConcurrentQueue<int>();
+        Lock _serialReadingLock = new();
         private void OnDataRecieved(object sender, SerialDataReceivedEventArgs e)
         {
 
+            if(!_serialReadingLock.TryEnter())
+                return;
+
             try
             {
-                if (_dataPort!.BytesToRead >= 4)
+                while (_dataPort?.BytesToRead > 0)
                 {
                     int byteValue = _dataPort.ReadByte();
                     _magicWordQueue.Enqueue(byteValue);
 
                     if (_magicWordQueue.Count > TLV_Constants.MAGIC_WORD.Length)
                     {
-                        _magicWordQueue.Dequeue();
+                        _magicWordQueue.TryDequeue(out byteValue);
                     }
 
                     if (IsMagicWordDetected()) //theres probably a slightly more efficient way than checking each 8 bytes, but this is drops in the bucket
@@ -142,8 +167,12 @@ namespace VitaWave.ModuleControl.Parsing
                         ex is InvalidOperationException ||
                         ex is UnauthorizedAccessException)
             {
-                Close();
+                Stop();
                 Log.Error("Serial Connection Failed");
+            }
+            finally
+            {
+                _serialReadingLock.Exit();
             }
         }
 
@@ -205,95 +234,35 @@ namespace VitaWave.ModuleControl.Parsing
                     return;
                 }
 
-                //serial thread doesn't worry about this anymore
-                Task.Run(() => CreateAndNotifyFrame(tlvBuffer, frameHeader));
+                _serialDataProcessor.AddToQueue(tlvBuffer, frameHeader);
             }
             catch (Exception ex) when (ex is IOException ||
                             ex is TimeoutException ||
                             ex is InvalidOperationException ||
                             ex is UnauthorizedAccessException)
             {
-                Close();
+                Stop();
                 Log.Error(ex, $"Dataport has failed.");
             }
         }
 
-
-        //private object _startPollingLock = new();
-        private Event? _old;
-        private object _notifyFrameLock;
-        //this method is very complicated... and for good reason.
-        //basically target indices for a frame match to the points of n-1 frames. yes. it's a nightmare
-        //so now we have to hold onto the "old" frame, and when a new one comes in:
-        //firstly, we only notify with the old frame, new frame will become old frame as long as there isn't any funny business
-        //if the new one is null (something parsing wise failed), we throw out the old one
-        //if we have target indicies in the new frame, we need to match them to the old frames points, if the counts of both don't match, we throw out this new one and the old one
-        //we then ship off the old one then old becomes the new one
-
-        //therefore, every frame is sent on the next call of this function
-        private void CreateAndNotifyFrame(Span<byte> tlvBuffer, FrameHeader frameHeader)
+        public async Task<State> WriteConfigFromFile()
         {
-            lock (_notifyFrameLock)
-            {
-                try
-                {
-                    var resultingEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
-
-                    if (resultingEvent == null)
-                    {
-                        _old = null; //we don't send this one if the last is null
-                        Log.Error("Resultant frame is null");
-                        return;
-                    }
-
-                    if (resultingEvent.TargetIndices != null)
-                    {
-                        if (_old?.Points?.Count != resultingEvent.TargetIndices.Count)
-                        {
-                            _old = null; //we don't send this one if the counts don't match
-                            Log.Error("Frame target indices doesn't match expected number of points");
-                            return;
-                        }
-
-                        for (int i = 0; i < resultingEvent.TargetIndices.Count; i++)
-                        {
-                            _old!.Points![i].TID = resultingEvent.TargetIndices[i];
-                        }
-                    }
-
-                    if (_old != null)
-                    {
-                        //BIG TODO: put processing logic here
-                    }
-
-                    _old = resultingEvent;
-                }
-                catch (Exception e)
-                {
-                    _old = null;
-                    Log.Error(e, "Bad Frame");
-                }
-            }
+            return await WriteConfigToModule(FileHelper.ReadConfigFile());
         }
 
-        public State TryWriteConfigFromFile()
+        public async Task<State> WriteConfigFromFile(string[] configStrings)
         {
-            return TryWriteConfigToModule(FileHelper.FindAndReadConfigFile());
+            return await WriteConfigToModule(configStrings);
         }
-
-        public State TryWriteConfigFromFile(string[] configStrings)
-        {
-            return TryWriteConfigToModule(configStrings);
-        }
-
-        //TODO: see if the module returns anything and base off of that, possibly wait and see if the data port has new data...?
 
         int _configLineSendTimeInMs = 10;
-        private State TryWriteConfigToModule(string[] configStrings)
+
+        private async Task<State> WriteConfigToModule(string[] configStrings)
         {
             if (_cliPort == null || !_cliPort.IsOpen)
             {
-                Close();
+                Stop();
                 Log.Error($"CLI port failed to connect.");
                 return Status;
             }
@@ -306,7 +275,7 @@ namespace VitaWave.ModuleControl.Parsing
                     {
                         string trimmedLine = line.Trim('\n');
                         _cliPort.WriteLine(trimmedLine);
-                        Thread.Sleep(_configLineSendTimeInMs);
+                        await Task.Delay(_configLineSendTimeInMs);  // Non-blocking delay
                         Console.WriteLine(trimmedLine);
                     }
                 }
@@ -316,19 +285,11 @@ namespace VitaWave.ModuleControl.Parsing
                             ex is InvalidOperationException ||
                             ex is UnauthorizedAccessException)
             {
-                Close();
+                Stop();
                 Log.Error(ex, $"CLI Port: [{_cliPort.PortName}] failed to connect.");
             }
 
             return Status;
-        }
-
-
-        public enum State
-        {
-            AwaitingPortInit,       //We haven't started anything yet
-            Running,                //Actively waiting on events
-            Paused                  //We can start whenever
         }
     }
 }

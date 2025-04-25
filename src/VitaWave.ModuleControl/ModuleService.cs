@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Hosting;
-using VitaWave.Common.Interfaces;
 using VitaWave.ModuleControl.Interfaces;
 
 namespace VitaWave.ModuleControl
@@ -19,7 +18,6 @@ namespace VitaWave.ModuleControl
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-
 
 
             await Task.Delay(Timeout.Infinite, stoppingToken);

@@ -66,9 +66,10 @@ namespace VitaWave.ModuleControl.Parsing
                     numTlvsRead++;
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 resultingEvent = null;
+                //this gets logged upstream
             }
 
             return resultingEvent;

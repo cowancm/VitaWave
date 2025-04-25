@@ -1,24 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Serilog;
 using System.Text.Json;
-using System.Threading.Tasks;
 using VitaWave.ModuleControl.Interfaces;
 
 namespace VitaWave.ModuleControl.Settings
 {
-    internal class RunTimeSettingsManager : IRuntimeSettingsManager
+    internal class RuntimeSettingsManager : IRuntimeSettingsManager
     {
         private const string ConfigPath = "runtimesettings.json";
 
         public RuntimeSettings? GetSettings()
         {
-            if (!File.Exists(ConfigPath))
-                return RuntimeSettings.Default;
-
             var json = File.ReadAllText(ConfigPath);
-            return JsonSerializer.Deserialize<RuntimeSettings>(json);
+
+            RuntimeSettings? settings = null;
+
+            try
+            {
+                settings = JsonSerializer.Deserialize<RuntimeSettings>(json) ?? throw new Exception();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error getting runtime settings");
+            }
+
+            return settings;
         }
 
         public void SaveSettings(RuntimeSettings settings)
