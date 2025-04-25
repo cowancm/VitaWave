@@ -85,6 +85,7 @@ namespace VitaWave.ModuleControl.Parsing
                 Stop();
                 Log.Error(ex, $"Error Initializing ports." +
                             $"\nPorts: DATA[{_dataPortName ?? "NULL"}], CLI[{_cliPortName ?? "NULL"}]");
+                return Status;
             }
             Status = State.Paused;
             return Status;
@@ -92,6 +93,9 @@ namespace VitaWave.ModuleControl.Parsing
 
         public State Run()
         {
+            if(_dataPort == null || !_dataPort.IsOpen)
+                return Status;
+
             Status = State.Running;
             return Status;
         }
@@ -246,25 +250,39 @@ namespace VitaWave.ModuleControl.Parsing
             }
         }
 
-        public async Task<State> WriteConfigFromFile()
+        public async Task<bool> TryWriteConfigFromFile()
         {
-            return await WriteConfigToModule(FileHelper.ReadConfigFile());
+            var currentDirectory = Directory.GetCurrentDirectory();
+            var files = Directory.GetFiles(currentDirectory, "*.cfg");
+            var configFile = files?.First();
+
+            if (configFile == null)
+            {
+                Log.Error("No config file found when trying to write config file.");
+                return false;
+            }
+            else if (files?.Length > 0)
+            {
+                Log.Error($"Multiple config files found, using \"{configFile}\"");
+            }
+
+            return await TryWriteConfigToModule(File.ReadAllLines(configFile));
         }
 
-        public async Task<State> WriteConfigFromFile(string[] configStrings)
+        public async Task<bool> TryWriteConfigFromFile(string[] configStrings)
         {
-            return await WriteConfigToModule(configStrings);
+            return await TryWriteConfigToModule(configStrings);
         }
 
         int _configLineSendTimeInMs = 10;
 
-        private async Task<State> WriteConfigToModule(string[] configStrings)
+        private async Task<bool> TryWriteConfigToModule(string[] configStrings)
         {
             if (_cliPort == null || !_cliPort.IsOpen)
             {
                 Stop();
                 Log.Error($"CLI port failed to connect.");
-                return Status;
+                return false;
             }
 
             try
@@ -276,7 +294,7 @@ namespace VitaWave.ModuleControl.Parsing
                         string trimmedLine = line.Trim('\n');
                         _cliPort.WriteLine(trimmedLine);
                         await Task.Delay(_configLineSendTimeInMs);  // Non-blocking delay
-                        Console.WriteLine(trimmedLine);
+                        System.Console.WriteLine(trimmedLine);
                     }
                 }
             }
@@ -287,9 +305,10 @@ namespace VitaWave.ModuleControl.Parsing
             {
                 Stop();
                 Log.Error(ex, $"CLI Port: [{_cliPort.PortName}] failed to connect.");
+                return false;
             }
 
-            return Status;
+            return true;
         }
     }
 }

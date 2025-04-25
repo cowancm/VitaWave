@@ -17,7 +17,7 @@
 	
 	<!--copy any config files in root-->
 	<ItemGroup>
-		<None Include="..\..\*.cfg">
+		<None Include="..\..\*.cfg;..\..\runtimesettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Link>%(Filename)%(Extension)</Link>
 		</None>

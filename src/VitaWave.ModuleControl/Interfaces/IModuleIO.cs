@@ -12,8 +12,8 @@
         void Pause();
         State Stop();
 
-        Task<State> WriteConfigFromFile();
-        Task<State> WriteConfigFromFile(string[] configStrings);
+        Task<bool> TryWriteConfigFromFile();
+        Task<bool> TryWriteConfigFromFile(string[] configStrings);
     }
 
     public enum State

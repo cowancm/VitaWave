@@ -7,28 +7,48 @@ using VitaWave.ModuleControl.DataAggregation;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing;
 using VitaWave.ModuleControl.Settings;
+using Microsoft.Extensions.Configuration;
 
 namespace ModuleControl
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console()
-            .CreateLogger();
+            try
+            {
+                Log.Logger = new LoggerConfiguration()
+                    .MinimumLevel.Information()
+                    .WriteTo.Console()
+                    .CreateLogger();
 
-            var builder = Host.CreateApplicationBuilder();
-
-            builder.Services.AddSingleton<IRuntimeSettingsManager, RuntimeSettingsManager>()
-                            .AddSingleton<ISerialProcessor, SerialDataProcessor>()
-                            .AddSingleton<IModuleIO, ModuleIO>()
-                            .AddSingleton<IDataAggregator, DataAggregator>()
-                            .AddSingleton<ISignalRClient, SignalRClient>()
-                            .AddHostedService<ModuleService>();
-
-            var host = builder.Build();
-            host.RunAsync();
+                await Host.CreateDefaultBuilder(args)
+                    .ConfigureAppConfiguration((context, config) =>
+                    {
+                        //lata
+                        //config.AddJsonFile("appsettings.json", optional: false)
+                        //      .AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true)
+                        //      .AddEnvironmentVariables();
+                    })
+                    .ConfigureServices((context, services) =>
+                    {
+                        services.AddSingleton<IRuntimeSettingsManager, RuntimeSettingsManager>()
+                                .AddSingleton<ISerialProcessor, SerialDataProcessor>()
+                                .AddSingleton<IModuleIO, ModuleIO>()
+                                .AddSingleton<IDataAggregator, DataAggregator>()
+                                .AddSingleton<ISignalRClient, SignalRClient>()
+                                .AddHostedService<ModuleService>();
+                    })
+                    .RunConsoleAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Host terminated unexpectedly");
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
     }
 }

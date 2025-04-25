@@ -1,26 +1,42 @@
 ﻿using Microsoft.Extensions.Hosting;
 using VitaWave.ModuleControl.Interfaces;
 
-namespace VitaWave.ModuleControl
+internal class ModuleService : BackgroundService
 {
-    internal class ModuleService : BackgroundService
+    private readonly IDataAggregator _aggregator;
+    private readonly ISignalRClient _signalRClient;
+    private readonly IModuleIO _moduleIO;
+    private readonly ConsoleController _consoleController;
+
+    public ModuleService(
+        IDataAggregator aggregator,
+        ISignalRClient client,
+        IModuleIO moduleIO)
     {
-        private readonly IModuleIO _moduleIO;
-        private readonly IDataAggregator _aggregator;
-        private readonly ISignalRClient _signalRClient;
+        _aggregator = aggregator;
+        _signalRClient = client;
+        _moduleIO = moduleIO;
+        _consoleController = new ConsoleController(moduleIO);
+    }
 
-        public ModuleService(IModuleIO moduleIO, IDataAggregator aggregator, ISignalRClient client)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        try
         {
-            _moduleIO = moduleIO;
-            _aggregator = aggregator;
-            _signalRClient = client;
-        }
+            _consoleController.Start();
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
+            var status = _moduleIO.InitializePorts();
 
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            _consoleController.Stop();
+            _moduleIO.Stop();
         }
     }
 }

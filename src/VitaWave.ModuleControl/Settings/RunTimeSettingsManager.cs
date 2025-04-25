@@ -6,16 +6,16 @@ namespace VitaWave.ModuleControl.Settings
 {
     internal class RuntimeSettingsManager : IRuntimeSettingsManager
     {
-        private const string ConfigPath = "runtimesettings.json";
+
+        private string _fileName = "runtimesettings.json";
 
         public RuntimeSettings? GetSettings()
         {
-            var json = File.ReadAllText(ConfigPath);
-
             RuntimeSettings? settings = null;
 
             try
             {
+                var json = File.ReadAllText(_fileName);
                 settings = JsonSerializer.Deserialize<RuntimeSettings>(json) ?? throw new Exception();
             }
             catch (Exception ex)
@@ -29,7 +29,7 @@ namespace VitaWave.ModuleControl.Settings
         public void SaveSettings(RuntimeSettings settings)
         {
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(ConfigPath, json);
+            File.WriteAllText(_fileName, json);
         }
     }
 }

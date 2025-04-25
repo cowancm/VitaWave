@@ -1,15 +1,15 @@
 ﻿using System.IO.Ports;
 using VitaWave.ModuleControl.Parsing;
 
-namespace VitaWave.ModuleControl.Utils
+namespace VitaWave.ModuleControl.Console
 {
     public static class ConsoleHelpers
     {
         public static void OutputFancyLabel()
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            System.Console.ForegroundColor = ConsoleColor.Cyan;
 
-            Console.WriteLine(@"
+            System.Console.WriteLine(@"
 
  __      __ _  __       ___         ___       
  \ \    / /|_| | |      \ \        / /                
@@ -20,35 +20,35 @@ namespace VitaWave.ModuleControl.Utils
                                                        
 ");
 
-            Console.ForegroundColor = ConsoleColor.White;
+            System.Console.ForegroundColor = ConsoleColor.White;
 
-            Console.ResetColor();
+            System.Console.ResetColor();
         }
 
-        public static(string, string) GetComPorts()
+        public static (string, string) GetComPorts()
         {
             string dataPort;
             string cliPort;
 
             var availPorts = SerialPort.GetPortNames().ToList();
-                           //= new List<string>() { "COM6", "COM31", "COM9" }; //testing purposes
+            //= new List<string>() { "COM6", "COM31", "COM9" }; //testing purposes
 
             var portNum_PortName = new Dictionary<string, string>();
 
-            Console.WriteLine("Current Available Ports:");
+            System.Console.WriteLine("Current Available Ports:");
 
             foreach (string availPort in availPorts)
             {
                 string portNum = new string(availPort.Where(char.IsDigit).ToArray());
                 portNum_PortName.Add(portNum, availPort);
-                Console.WriteLine($"{availPort} [{portNum}]");
+                System.Console.WriteLine($"{availPort} [{portNum}]");
             }
-            Console.WriteLine();
-            Console.WriteLine("Please select the data port.");
+            System.Console.WriteLine();
+            System.Console.WriteLine("Please select the data port.");
 
             while (true)
             {
-                var selectionPortNum = Console.ReadLine()?.Trim() ?? string.Empty;
+                var selectionPortNum = System.Console.ReadLine()?.Trim() ?? string.Empty;
 
                 if (portNum_PortName.TryGetValue(selectionPortNum, out var port))
                 {
@@ -57,15 +57,15 @@ namespace VitaWave.ModuleControl.Utils
                     break;
                 }
 
-                Console.WriteLine("Invalid selection.");
+                System.Console.WriteLine("Invalid selection.");
             }
 
-            Console.WriteLine();
-            Console.WriteLine("Please select the CLI port: ");
+            System.Console.WriteLine();
+            System.Console.WriteLine("Please select the CLI port: ");
 
             while (true)
             {
-                var selectionPortNum = Console.ReadLine()?.Trim() ?? string.Empty;
+                var selectionPortNum = System.Console.ReadLine()?.Trim() ?? string.Empty;
 
                 if (portNum_PortName.TryGetValue(selectionPortNum, out var port))
                 {
@@ -74,40 +74,40 @@ namespace VitaWave.ModuleControl.Utils
                     break;
                 }
 
-                Console.WriteLine("Invalid selection.");
+                System.Console.WriteLine("Invalid selection.");
             }
 
-            Console.WriteLine();
+            System.Console.WriteLine();
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("Selected Data: " + dataPort);
-            Console.WriteLine("Selected CLI : " + cliPort);
-            Console.ForegroundColor = ConsoleColor.White;
+            System.Console.ForegroundColor = ConsoleColor.Cyan;
+            System.Console.WriteLine("Selected Data: " + dataPort);
+            System.Console.WriteLine("Selected CLI : " + cliPort);
+            System.Console.ForegroundColor = ConsoleColor.White;
 
-            Console.ResetColor();
+            System.Console.ResetColor();
 
             return (dataPort, cliPort);
         }
 
         public static bool AskAboutDataLogging()
         {
-            Console.WriteLine("Would you like to save data? (y/n)");
+            System.Console.WriteLine("Would you like to save data? (y/n)");
             while (true)
             {
-                var result = Console.ReadLine()?.Trim()?.ToLower() ?? string.Empty;
+                var result = System.Console.ReadLine()?.Trim()?.ToLower() ?? string.Empty;
 
                 if (result == "y")
                 {
-                    Console.WriteLine();
+                    System.Console.WriteLine();
                     return true;
                 }
                 else if (result == "n")
                 {
-                    Console.WriteLine();
+                    System.Console.WriteLine();
                     return false;
                 }
 
-                Console.WriteLine("Invalid response. Press (y/n)");
+                System.Console.WriteLine("Invalid response. Press (y/n)");
             }
         }
 
@@ -115,18 +115,18 @@ namespace VitaWave.ModuleControl.Utils
         {
             if (e?.Targets?.Count > 0)
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("PRESENCE DETECTED: " + $"{e.Targets.Count} TARGETS");
-                Console.ResetColor();
+                System.Console.ForegroundColor = ConsoleColor.Green;
+                System.Console.WriteLine("PRESENCE DETECTED: " + $"{e.Targets.Count} TARGETS");
+                System.Console.ResetColor();
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("NO PRESENCE DETECTED");
-                Console.ResetColor();
+                System.Console.ForegroundColor = ConsoleColor.Red;
+                System.Console.WriteLine("NO PRESENCE DETECTED");
+                System.Console.ResetColor();
             }
         }
 
-        
+
     }
 }
