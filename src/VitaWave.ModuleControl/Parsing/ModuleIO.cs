@@ -100,9 +100,13 @@ namespace VitaWave.ModuleControl.Parsing
             return Status;
         }
 
-        public void Pause()
+        public State Pause()
         {
-            Status = State.Paused; //This only pasuses sending/processing new frames, serial buffers are still getting read
+            if (_dataPort == null || !_dataPort.IsOpen)
+                return Status;
+
+            Status = State.Paused;
+            return Status; //This only pasuses sending/processing new frames, serial buffers are still getting read
         }
 
         public State Stop()
@@ -113,26 +117,40 @@ namespace VitaWave.ModuleControl.Parsing
             return Status;
         }
 
+        Lock _closingLock = new();
         private void ClosePorts()
         {
-            if (_dataPort != null)
-            {
-                if (_dataPort.IsOpen)
-                {
-                    try { _dataPort.Close(); } catch { /* ignore errors during close */ }
-                }
-                _dataPort.Dispose();
-                _dataPort = null;
-            }
+            if(!_closingLock.TryEnter())
+                return;
 
-            if (_cliPort != null)
+            try
             {
-                if (_cliPort.IsOpen)
+                if (_dataPort != null)
                 {
-                    try { _cliPort.Close(); } catch { /* ignore errors during close */ }
+                    if (_dataPort.IsOpen)
+                    {
+                        _dataPort.Dispose();
+                        try { _dataPort.Close(); } catch { /* ignore errors during close */ } finally { _dataPort.Dispose(); }
+                    }
+                    _dataPort = null;
                 }
-                _cliPort.Dispose();
-                _cliPort = null;
+
+                if (_cliPort != null)
+                {
+                    if (_cliPort.IsOpen)
+                    {
+                        try { _cliPort.Close(); } catch { /* ignore errors during close */ } finally { _cliPort.Dispose(); }
+                    }
+                    _cliPort = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error closing ports");
+            }
+            finally
+            {
+                _closingLock.Exit();
             }
         }
 
@@ -261,7 +279,7 @@ namespace VitaWave.ModuleControl.Parsing
                 Log.Error("No config file found when trying to write config file.");
                 return false;
             }
-            else if (files?.Length > 0)
+            else if (files?.Length > 1)
             {
                 Log.Error($"Multiple config files found, using \"{configFile}\"");
             }
@@ -292,9 +310,9 @@ namespace VitaWave.ModuleControl.Parsing
                     if (!line.Contains('%') && !string.IsNullOrEmpty(line) && !(line == "\n"))
                     {
                         string trimmedLine = line.Trim('\n');
+                        Log.Information("Sending to CLI: " + trimmedLine);
                         _cliPort.WriteLine(trimmedLine);
                         await Task.Delay(_configLineSendTimeInMs);  // Non-blocking delay
-                        System.Console.WriteLine(trimmedLine);
                     }
                 }
             }

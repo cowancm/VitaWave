@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing.TLVs;
 
@@ -108,7 +109,10 @@ namespace VitaWave.ModuleControl.Parsing
                 }
                 if (_old != null)
                 {
-                    //BIG TODO: put processing logic here
+                    //BIG TODO: send this to the aggregator
+
+                    //for now for testing, let's send this to the console
+                    ConsoleHelpers.PrintTargetIndication(newEvent);
                 }
                 _old = newEvent;
             }

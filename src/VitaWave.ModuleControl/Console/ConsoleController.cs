@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 
 public class ConsoleController
 {
-    //i had AI write this stub. will implement my own shizaz soon
-
     private readonly CancellationTokenSource _cts = new CancellationTokenSource();
     private Task? _consoleTask;
 
@@ -20,6 +19,8 @@ public class ConsoleController
     public void Start()
     {
         if (_consoleTask != null) return;
+
+        ConsoleHelpers.OutputFancyLabel();
 
         _consoleTask = Task.Run(() => RunConsoleLoop(_cts.Token));
     }
@@ -60,7 +61,6 @@ public class ConsoleController
     }
 
 
-    //AI generated.Implementation pending atm
     private async Task ProcessCommand(string? command, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(command)) return;
@@ -69,15 +69,21 @@ public class ConsoleController
         {
             case "help":
                 Console.WriteLine("Available commands:");
-                Console.WriteLine("  help - Show this help");
-                Console.WriteLine("  start - Start the module");
-                Console.WriteLine("  stop - Stop the module");
-                Console.WriteLine("  status - Show current status");
-                Console.WriteLine("  exit - Exit the application");
+                Console.WriteLine("  init     - initialize ports");
+                Console.WriteLine("  config  - send config file to module");
+                Console.WriteLine("  run     - run the parser");
+                Console.WriteLine("  stop    - stop and close the parser");
+                Console.WriteLine("  pause   - pause the parser");
+                Console.WriteLine("  exit    - Exit the application");
                 break;
 
-            case "start":
-                var status = _moduleIO.Run();
+            case "init":
+                var status = _moduleIO.InitializePorts();
+                Console.WriteLine($"Module started. Status: {status}");
+                break;
+
+            case "run":
+                status = _moduleIO.Run();
                 Console.WriteLine($"Module started. Status: {status}");
                 break;
 
@@ -91,12 +97,16 @@ public class ConsoleController
                 break;
 
             case "config":
-                await _moduleIO.TryWriteConfigFromFile();
-                Console.WriteLine("Configuration written to module.");
+                var result = (await _moduleIO.TryWriteConfigFromFile()) ? "Success" : "Failed";
+                Console.WriteLine($"Configuration written to module. Result: {result}");
+                break;
+
+            case "pause":
+                status = _moduleIO.Pause();
+                Console.WriteLine($"Module attempted to be paused. \nStatus: {status}");
                 break;
 
             case "exit":
-                // Signal the application to exit
                 Environment.Exit(0);
                 break;
 

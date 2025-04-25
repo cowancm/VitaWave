@@ -9,7 +9,7 @@
         void ChangePortSettings();
         State InitializePorts();
         State Run();
-        void Pause();
+        State Pause();
         State Stop();
 
         Task<bool> TryWriteConfigFromFile();
