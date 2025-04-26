@@ -8,6 +8,7 @@ public class ConsoleController
 {
     private readonly CancellationTokenSource _cts = new CancellationTokenSource();
     private Task? _consoleTask;
+    private CancellationToken ct;
 
     private readonly IModuleIO _moduleIO;
 
@@ -83,7 +84,7 @@ public class ConsoleController
                 break;
 
             case "run":
-                status = _moduleIO.Run();
+                status = _moduleIO.Run(token);
                 Console.WriteLine($"Module started. Status: {status}");
                 break;
 

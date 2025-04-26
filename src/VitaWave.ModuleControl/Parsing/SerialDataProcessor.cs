@@ -51,14 +51,16 @@ namespace VitaWave.ModuleControl.Parsing
         {
             try
             {
+                Thread.CurrentThread.Priority = ThreadPriority.Highest;
+
                 while (!ct.IsCancellationRequested)
                 {
-                    await _signal.WaitAsync(ct);
-
                     while (_frameQueue.TryDequeue(out var newData))
                     {
                         CreateAndNotifyFrame(newData.Buffer, newData.Header);
                     }
+
+                    await _signal.WaitAsync(ct);
                 }
             }
             catch (OperationCanceledException) { }

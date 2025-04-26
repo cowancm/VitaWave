@@ -28,11 +28,11 @@ namespace VitaWave.ModuleControl.Parsing
         private int _cliBaud;
         private SerialPort? _dataPort;
         private SerialPort? _cliPort;
+        private Task? _pollSerialTask = null;
 
         private readonly IRuntimeSettingsManager _settingsManager;
         private readonly ISerialProcessor _serialDataProcessor;
 
-        const int MinimumBytesForOnDataRecieved = TLV_Constants.FULL_FRAME_HEADER_SIZE;
         const int DataBufferSizeInBytes = 16384;
 
         public void ChangePortSettings()
@@ -74,9 +74,6 @@ namespace VitaWave.ModuleControl.Parsing
                     Encoding = Encoding.UTF8,
                 };
 
-                _dataPort.ReceivedBytesThreshold = MinimumBytesForOnDataRecieved;
-                _dataPort.DataReceived += OnDataRecieved;
-
                 _dataPort.Open();
                 _cliPort.Open();
             }
@@ -91,37 +88,41 @@ namespace VitaWave.ModuleControl.Parsing
             return Status;
         }
 
-        public State Run()
+        public State Run(CancellationToken ct)
         {
-            if(_dataPort == null || !_dataPort.IsOpen)
-                return Status;
+            if (_pollSerialTask == null)
+            {
+                _pollSerialTask = Task.Run(() => PollSerial(ct));
+                Status = State.Running;
+            }
 
-            Status = State.Running;
             return Status;
         }
 
         public State Pause()
         {
-            if (_dataPort == null || !_dataPort.IsOpen)
+            if (_pollSerialTask == null)
                 return Status;
 
             Status = State.Paused;
             return Status; //This only pasuses sending/processing new frames, serial buffers are still getting read
         }
 
+        object _stopLock = new();
         public State Stop()
         {
-            OnConnectionLost?.Invoke(this, EventArgs.Empty);
-            Status = State.AwaitingPortInit;
-            ClosePorts();
+            lock(_stopLock)
+            {
+                Status = State.AwaitingPortInit;
+                _pollSerialTask = null;
+                OnConnectionLost?.Invoke(this, EventArgs.Empty);
+                ClosePorts();
+            }
             return Status;
         }
 
-        Lock _closingLock = new();
         private void ClosePorts()
         {
-            if(!_closingLock.TryEnter())
-                return;
 
             try
             {
@@ -129,7 +130,6 @@ namespace VitaWave.ModuleControl.Parsing
                 {
                     if (_dataPort.IsOpen)
                     {
-                        _dataPort.Dispose();
                         try { _dataPort.Close(); } catch { /* ignore errors during close */ } finally { _dataPort.Dispose(); }
                     }
                     _dataPort = null;
@@ -148,68 +148,55 @@ namespace VitaWave.ModuleControl.Parsing
             {
                 Log.Error(ex, "Error closing ports");
             }
-            finally
-            {
-                _closingLock.Exit();
-            }
         }
 
 
-        ConcurrentQueue<int> _magicWordQueue = new ConcurrentQueue<int>();
-        Lock _serialReadingLock = new();
-        private void OnDataRecieved(object sender, SerialDataReceivedEventArgs e)
-        {
+        private int[] _magicWordBuffer;
+        private int _bufferIndex = 0;
 
-            if(!_serialReadingLock.TryEnter())
-                return;
+        private async void PollSerial(CancellationToken ct)
+        {
+            // Initialize buffer to hold exactly the magic word length
+            _magicWordBuffer = new int[TLV_Constants.MAGIC_WORD.Length];
+
+            Thread.CurrentThread.Priority = ThreadPriority.Highest;
 
             try
             {
-                while (_dataPort?.BytesToRead > 0)
+                while (!ct.IsCancellationRequested)
                 {
-                    int byteValue = _dataPort.ReadByte();
-                    _magicWordQueue.Enqueue(byteValue);
-
-                    if (_magicWordQueue.Count > TLV_Constants.MAGIC_WORD.Length)
+                    while (_dataPort?.BytesToRead > TLV_Constants.MAGIC_WORD.Length && Status == State.Running)
                     {
-                        _magicWordQueue.TryDequeue(out byteValue);
-                    }
+                        int byteValue = _dataPort.ReadByte();
 
-                    if (IsMagicWordDetected()) //theres probably a slightly more efficient way than checking each 8 bytes, but this is drops in the bucket
-                    {
-                        _magicWordQueue.Clear();
+                        _magicWordBuffer[_bufferIndex] = byteValue;
+                        _bufferIndex = (_bufferIndex + 1) % TLV_Constants.MAGIC_WORD.Length;
 
-                        if (Status != State.Paused)
+                        if (IsMagicWordDetected())
+                        {
                             ProcessFrame();
+                        }
                     }
                 }
             }
             catch (Exception ex) when (ex is IOException ||
                         ex is TimeoutException ||
                         ex is InvalidOperationException ||
-                        ex is UnauthorizedAccessException)
+                        ex is UnauthorizedAccessException ||
+                        ex is NullReferenceException)
             {
-                Stop();
-                Log.Error("Serial Connection Failed");
+                Log.Error(ex, "Serial Connection Failed");
             }
-            finally
-            {
-                _serialReadingLock.Exit();
-            }
+            Stop();
         }
-
 
         private bool IsMagicWordDetected()
         {
-            if (_magicWordQueue.Count < TLV_Constants.MAGIC_WORD.Length)
-                return false;
-
-            int i = 0;
-            foreach (var value in _magicWordQueue)
+            for (int i = 0; i < TLV_Constants.MAGIC_WORD.Length; i++)
             {
-                if (value != TLV_Constants.MAGIC_WORD[i])
+                int bufferPosition = (_bufferIndex + i) % TLV_Constants.MAGIC_WORD.Length;
+                if (_magicWordBuffer[bufferPosition] != TLV_Constants.MAGIC_WORD[i])
                     return false;
-                i++;
             }
             return true;
         }
@@ -312,7 +299,7 @@ namespace VitaWave.ModuleControl.Parsing
                         string trimmedLine = line.Trim('\n');
                         Log.Information("Sending to CLI: " + trimmedLine);
                         _cliPort.WriteLine(trimmedLine);
-                        await Task.Delay(_configLineSendTimeInMs);  // Non-blocking delay
+                        await Task.Delay(_configLineSendTimeInMs);
                     }
                 }
             }
@@ -325,7 +312,6 @@ namespace VitaWave.ModuleControl.Parsing
                 Log.Error(ex, $"CLI Port: [{_cliPort.PortName}] failed to connect.");
                 return false;
             }
-
             return true;
         }
     }
