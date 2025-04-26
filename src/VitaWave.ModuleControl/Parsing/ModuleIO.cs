@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.IO.Ports;
-using System.Collections.Concurrent;
 using Serilog;
 using VitaWave.ModuleControl.Utils;
 using VitaWave.ModuleControl.Parsing.TLVs;
@@ -88,15 +87,22 @@ namespace VitaWave.ModuleControl.Parsing
             return Status;
         }
 
-        public State Run(CancellationToken ct)
+        CancellationTokenSource _cts = new CancellationTokenSource();
+
+        public State Run()
         {
-            if (_pollSerialTask == null)
+
+            if ((_pollSerialTask == null || _pollSerialTask == Task.CompletedTask) && Status != State.AwaitingPortInit)
             {
-                _pollSerialTask = Task.Run(() => PollSerial(ct));
+                var token = _cts.Token;
+                _pollSerialTask = Task.Run(() => PollSerial(token));
                 Status = State.Running;
             }
 
-            return Status;
+            if (Status == State.Paused)
+                Status = State.Running;
+
+                return Status;
         }
 
         public State Pause()
@@ -109,10 +115,15 @@ namespace VitaWave.ModuleControl.Parsing
         }
 
         object _stopLock = new();
+        int _taskCompletionTimeoutInMs = 100;
         public State Stop()
         {
             lock(_stopLock)
             {
+                _cts.Cancel();
+                _pollSerialTask?.Wait(_taskCompletionTimeoutInMs);
+                _cts.Dispose();
+                _cts = new();
                 Status = State.AwaitingPortInit;
                 _pollSerialTask = null;
                 OnConnectionLost?.Invoke(this, EventArgs.Empty);
@@ -151,14 +162,11 @@ namespace VitaWave.ModuleControl.Parsing
         }
 
 
-        private int[] _magicWordBuffer;
+        private int[] _magicWordBuffer = new int[TLV_Constants.MAGIC_WORD.Length];
         private int _bufferIndex = 0;
 
-        private async void PollSerial(CancellationToken ct)
+        private void PollSerial(CancellationToken ct)
         {
-            // Initialize buffer to hold exactly the magic word length
-            _magicWordBuffer = new int[TLV_Constants.MAGIC_WORD.Length];
-
             Thread.CurrentThread.Priority = ThreadPriority.Highest;
 
             try
@@ -179,15 +187,11 @@ namespace VitaWave.ModuleControl.Parsing
                     }
                 }
             }
-            catch (Exception ex) when (ex is IOException ||
-                        ex is TimeoutException ||
-                        ex is InvalidOperationException ||
-                        ex is UnauthorizedAccessException ||
-                        ex is NullReferenceException)
+            catch (Exception ex)
             {
                 Log.Error(ex, "Serial Connection Failed");
+                Stop();
             }
-            Stop();
         }
 
         private bool IsMagicWordDetected()
@@ -245,10 +249,7 @@ namespace VitaWave.ModuleControl.Parsing
 
                 _serialDataProcessor.AddToQueue(tlvBuffer, frameHeader);
             }
-            catch (Exception ex) when (ex is IOException ||
-                            ex is TimeoutException ||
-                            ex is InvalidOperationException ||
-                            ex is UnauthorizedAccessException)
+            catch (Exception ex)
             {
                 Stop();
                 Log.Error(ex, $"Dataport has failed.");
@@ -303,10 +304,7 @@ namespace VitaWave.ModuleControl.Parsing
                     }
                 }
             }
-            catch (Exception ex) when (ex is IOException ||
-                            ex is TimeoutException ||
-                            ex is InvalidOperationException ||
-                            ex is UnauthorizedAccessException)
+            catch (Exception ex)
             {
                 Stop();
                 Log.Error(ex, $"CLI Port: [{_cliPort.PortName}] failed to connect.");

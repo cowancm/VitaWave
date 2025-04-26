@@ -1,8 +1,4 @@
 ﻿using Serilog;
-using System;
-using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing.TLVs;
@@ -11,9 +7,12 @@ namespace VitaWave.ModuleControl.Parsing
 {
     public class SerialDataProcessor : ISerialProcessor
     {
-        public bool IsRunning => _worker != null;
+        public bool IsRunning => _worker != null || _worker != Task.CompletedTask;
 
-        private ConcurrentQueue<(byte[] Buffer, FrameHeader Header)> _frameQueue = new ConcurrentQueue<(byte[], FrameHeader)>();
+        private (byte[] Buffer, FrameHeader Header)[] _frameBuffer = new (byte[], FrameHeader)[50];
+        private int _writeIndex = 0;
+        private int _readIndex = 0;
+        private bool _bufferFull = false;
         private Task? _worker = null;
         private SemaphoreSlim _signal = new SemaphoreSlim(0);
         private CancellationTokenSource? _cts = null;
@@ -27,7 +26,16 @@ namespace VitaWave.ModuleControl.Parsing
 
         public void AddToQueue(byte[] buffer, FrameHeader header)
         {
-            _frameQueue.Enqueue((buffer, header));
+            _frameBuffer[_writeIndex] = (buffer, header);
+            _writeIndex = (_writeIndex + 1) % _frameBuffer.Length;
+
+            if (_writeIndex == _readIndex)
+            {
+                _bufferFull = true;
+                _readIndex = (_readIndex + 1) % _frameBuffer.Length;
+                Log.Warning("Frame buffer overflow - dropping oldest frame");
+            }
+
             _signal.Release();
         }
 
@@ -55,9 +63,14 @@ namespace VitaWave.ModuleControl.Parsing
 
                 while (!ct.IsCancellationRequested)
                 {
-                    while (_frameQueue.TryDequeue(out var newData))
+                    // Process all available frames
+                    while (_readIndex != _writeIndex || _bufferFull)
                     {
-                        CreateAndNotifyFrame(newData.Buffer, newData.Header);
+                        var data = _frameBuffer[_readIndex];
+                        _readIndex = (_readIndex + 1) % _frameBuffer.Length;
+                        _bufferFull = false;
+
+                        CreateNewSendLast(data.Buffer, data.Header);
                     }
 
                     await _signal.WaitAsync(ct);
@@ -75,7 +88,7 @@ namespace VitaWave.ModuleControl.Parsing
         }
 
 
-        
+
         Event? _old;
         /// <summary>
         /// Target indices come from frame n+1 for frame n, therefore, we wait for the next frame so we can get this data, and 
@@ -85,7 +98,7 @@ namespace VitaWave.ModuleControl.Parsing
         /// </summary>
         /// <param name="tlvBuffer"></param>
         /// <param name="frameHeader"></param>
-        private void CreateAndNotifyFrame(byte[] tlvBuffer, FrameHeader frameHeader)
+        private void CreateNewSendLast(byte[] tlvBuffer, FrameHeader frameHeader)
         {
             try
             {

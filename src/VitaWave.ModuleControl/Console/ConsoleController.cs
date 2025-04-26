@@ -84,7 +84,7 @@ public class ConsoleController
                 break;
 
             case "run":
-                status = _moduleIO.Run(token);
+                status = _moduleIO.Run();
                 Console.WriteLine($"Module started. Status: {status}");
                 break;
 

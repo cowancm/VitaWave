@@ -8,7 +8,7 @@
 
         void ChangePortSettings();
         State InitializePorts();
-        State Run(CancellationToken ct);
+        State Run();
         State Pause();
         State Stop();
 
