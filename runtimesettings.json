@@ -1,0 +1,6 @@
+{
+  "DataPortName": "COM4",
+  "CliPortName": "COM3",
+  "DataBaud": 921600,
+  "CliBaud": 115200
+}
