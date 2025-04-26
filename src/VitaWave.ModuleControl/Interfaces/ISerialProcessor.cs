@@ -7,7 +7,8 @@ namespace VitaWave.ModuleControl.Interfaces
 
         public bool IsRunning { get; }
         public void AddToQueue(byte[] buffer, FrameHeader header);
-        public void Run(CancellationToken cancellationToken);
+        public void Run();
+        public void Stop();
         public void Dispose();
     }
 }

@@ -5,8 +5,6 @@
         event EventHandler? OnConnectionLost;
 
         State Status { get; }
-
-        void ChangePortSettings();
         State InitializePorts();
         State Run();
         State Pause();

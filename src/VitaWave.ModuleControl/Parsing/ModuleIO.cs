@@ -34,7 +34,7 @@ namespace VitaWave.ModuleControl.Parsing
 
         const int DataBufferSizeInBytes = 16384;
 
-        public void ChangePortSettings()
+        private void ChangePortSettings()
         {
             var settings = _settingsManager.GetSettings();
 
@@ -57,6 +57,8 @@ namespace VitaWave.ModuleControl.Parsing
             {
                 Stop();
             }
+
+            ChangePortSettings();
 
             try
             {

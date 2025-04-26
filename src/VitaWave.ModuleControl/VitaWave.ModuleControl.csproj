@@ -13,14 +13,12 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="System.IO.Ports" Version="9.0.3" />
   </ItemGroup>
-
 	
-	<!--copy any config files in root-->
+	<!--copy any settings-->
 	<ItemGroup>
-		<None Include="..\..\*.cfg;..\..\runtimesettings.json">
+		<None Include="..\..\DevSettings\*.cfg;..\..\DevSettings\runtimesettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Link>%(Filename)%(Extension)</Link>
 		</None>
 	</ItemGroup>
-
 </Project>

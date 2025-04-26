@@ -39,20 +39,32 @@ namespace VitaWave.ModuleControl.Parsing
             _signal.Release();
         }
 
-        public void Run(CancellationToken ct)
+        object _lock = new();
+
+        public void Run()
         {
-            if (_worker == null)
+            lock (_lock)
             {
-                _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                _worker = Task.Run(async () => await WaitForNewFrames(_cts.Token));
+                if (_cts == null)
+                {
+                    _cts = new CancellationTokenSource();
+                }
+
+                if (_worker == null)
+                {
+                    _worker = Task.Run(async () => await WaitForNewFrames(_cts.Token));
+                }
             }
         }
 
         public void Stop()
         {
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _cts = null;
+            lock (_lock)
+            {
+                _cts?.Cancel();
+                _cts?.Dispose();
+                _cts = null;
+            }
         }
 
         private async Task WaitForNewFrames(CancellationToken ct)

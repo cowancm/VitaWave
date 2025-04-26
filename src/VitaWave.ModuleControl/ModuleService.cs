@@ -27,7 +27,7 @@ internal class ModuleService : BackgroundService
         try
         {
             _consoleController.Start();
-            _serialProcessor.Run(stoppingToken);
+            _serialProcessor.Run();
 
             var status = _moduleIO.InitializePorts();
 
