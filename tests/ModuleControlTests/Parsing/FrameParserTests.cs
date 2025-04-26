@@ -1,4 +1,4 @@
-﻿using ModuleControl.Parsing;
+﻿using VitaWave.ModuleControl.Parsing;
 
 namespace ModuleControlTests.Parsing
 {
