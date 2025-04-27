@@ -36,8 +36,8 @@ namespace VitaWave.ModuleControl.Parsing
             {
                 while (numTlvsRead != frameHeader.NumTLVs)
                 {
-                    var tlvHeader = TLVHeader.GetHeaderTypeSize(tlvBuffer.Slice(indexInTlvBuffer, TLVHeader.HEADER_LENGTH));
-                    indexInTlvBuffer += TLVHeader.HEADER_LENGTH;
+                    var tlvHeader = TLVHeaderParser.GetHeaderTypeSize(tlvBuffer.Slice(indexInTlvBuffer, TLVHeaderParser.HEADER_LENGTH));
+                    indexInTlvBuffer += TLVHeaderParser.HEADER_LENGTH;
 
                     var headerType = tlvHeader.Item1;
                     var numBytesInThisTlv = tlvHeader.Item2;

@@ -3,7 +3,7 @@ using static VitaWave.ModuleControl.Parsing.TLVs.TLV_Constants;
 
 namespace VitaWave.ModuleControl.Parsing
 {
-    public static class TLVHeader
+    public static class TLVHeaderParser
     {
         public const int HEADER_LENGTH = 8;
         public static (TLV_TYPE, int) GetHeaderTypeSize(Span<byte> data)

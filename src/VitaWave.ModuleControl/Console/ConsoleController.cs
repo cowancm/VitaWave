@@ -11,10 +11,12 @@ public class ConsoleController
     private CancellationToken ct;
 
     private readonly IModuleIO _moduleIO;
+    private readonly ISignalRClient _signalRClient;
 
-    public ConsoleController(IModuleIO moduleIO)
+    public ConsoleController(IModuleIO moduleIO, ISignalRClient client)
     {
         _moduleIO = moduleIO;
+        _signalRClient = client;
     }
 
     public void Start()
@@ -105,6 +107,10 @@ public class ConsoleController
             case "pause":
                 status = _moduleIO.Pause();
                 Console.WriteLine($"Module attempted to be paused. \nStatus: {status}");
+                break;
+
+            case "ping":
+                await _signalRClient.SendDataAsync("foo");
                 break;
 
             case "exit":

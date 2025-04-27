@@ -36,7 +36,7 @@ namespace ModuleControl
                                 .AddSingleton<ISerialProcessor, SerialDataProcessor>()
                                 .AddSingleton<IModuleIO, ModuleIO>()
                                 .AddSingleton<IDataAggregator, DataAggregator>()
-                                .AddSingleton<ISignalRClient, SignalRClient>()
+                                .AddSingleton<ISignalRClient, ModuleClient>()
                                 .AddHostedService<ModuleService>();
                     })
                     .RunConsoleAsync();

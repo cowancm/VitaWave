@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
+using VitaWave.ModuleControl.Client;
 using VitaWave.ModuleControl.Interfaces;
 
 internal class ModuleService : BackgroundService
@@ -8,6 +9,8 @@ internal class ModuleService : BackgroundService
     private readonly IModuleIO _moduleIO;
     private readonly ISerialProcessor _serialProcessor;
     private readonly ConsoleController _consoleController;
+
+    private readonly ModuleClient moduleClient;
 
     public ModuleService(
         IDataAggregator aggregator,
@@ -19,7 +22,7 @@ internal class ModuleService : BackgroundService
         _signalRClient = client;
         _serialProcessor = serialProcessor;
         _moduleIO = moduleIO;
-        _consoleController = new ConsoleController(moduleIO);
+        _consoleController = new ConsoleController(moduleIO, client);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -29,6 +32,7 @@ internal class ModuleService : BackgroundService
             _consoleController.Start();
             _serialProcessor.Run();
 
+            await _signalRClient.StartAsync();
             var status = _moduleIO.InitializePorts();
 
 
