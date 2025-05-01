@@ -2,7 +2,7 @@
 
 namespace VitaWave.ModuleControl.Parsing
 {
-    public record Event
+    public record ParsingEvent
     {
         public FrameHeader? FrameHeader { get; set; }
         public List<Point>? Points { get; set; }

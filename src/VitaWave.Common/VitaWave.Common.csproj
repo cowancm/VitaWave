@@ -7,8 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Module to Server\Messages\" />
-    <Folder Include="Server to Module\Messages\" />
+    <Folder Include="ModuleToAPI\" />
+    <Folder Include="APIToModule\" />
+    <Folder Include="APIToWebserver\" />
   </ItemGroup>
 
 </Project>

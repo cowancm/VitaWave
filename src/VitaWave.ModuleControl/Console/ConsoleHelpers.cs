@@ -111,7 +111,7 @@ namespace VitaWave.ModuleControl.Console
             }
         }
 
-        public static void PrintTargetIndication(Event? e)
+        public static void PrintTargetIndication(ParsingEvent? e)
         {
             if (e?.Targets?.Count > 0)
             {

@@ -2,7 +2,7 @@
 {
     public record Target
     {
-        public uint Tid { get; init; }
+        public uint TID { get; init; }
         public float PosX { get; init; }
         public float PosY { get; init; }
         public float PosZ { get; init; }

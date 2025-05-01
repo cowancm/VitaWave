@@ -94,7 +94,7 @@ namespace VitaWave.ModuleControl.Parsing
 
 
 
-        Event? _old;
+        ParsingEvent? _old;
         /// <summary>
         /// Target indices come from frame n+1 for frame n, therefore, we wait for the next frame so we can get this data, and 
         /// apply them to the old object before we ship the old object out. So every frame is sent on the next call of this fn.

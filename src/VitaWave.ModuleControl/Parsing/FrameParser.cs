@@ -23,9 +23,9 @@ namespace VitaWave.ModuleControl.Parsing
             return result;
         }
 
-        public static Event? CreateEvent(Span<byte> tlvBuffer, FrameHeader frameHeader)
+        public static ParsingEvent? CreateEvent(Span<byte> tlvBuffer, FrameHeader frameHeader)
         {
-            var resultingEvent = new Event();
+            var resultingEvent = new ParsingEvent();
             resultingEvent.CreationTime = DateTime.Now;
             resultingEvent.FrameHeader = frameHeader;
 
@@ -114,7 +114,7 @@ namespace VitaWave.ModuleControl.Parsing
                 Y = range * Math.Cos(azimuth) * Math.Cos(elevation),
                 Z = range * Math.Sin(elevation),
                 Doppler = dopplerUnit * (double)MemoryMarshal.Read<Int16>(data.Slice(2, 2)),
-                Snr = snrUnit * (double)MemoryMarshal.Read<Int16>(data.Slice(6, 2)),
+                SNR = snrUnit * (double)MemoryMarshal.Read<Int16>(data.Slice(6, 2)),
             };
 
             return point;
@@ -153,7 +153,7 @@ namespace VitaWave.ModuleControl.Parsing
 
             var target = new Target()
             {
-                Tid = MemoryMarshal.Read<uint>(data.Slice(0, 4)),
+                TID = MemoryMarshal.Read<uint>(data.Slice(0, 4)),
                 PosX = MemoryMarshal.Read<float>(data.Slice(4, 4)),
                 PosY = MemoryMarshal.Read<float>(data.Slice(8, 4)),
                 PosZ = MemoryMarshal.Read<float>(data.Slice(12, 4)),
