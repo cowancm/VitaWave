@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using VitaWave.ModuleControl;
 using VitaWave.ModuleControl.Client;
-using VitaWave.ModuleControl.DataAggregation;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing;
 using VitaWave.ModuleControl.Settings;
@@ -35,7 +34,6 @@ namespace ModuleControl
                         services.AddSingleton<IRuntimeSettingsManager, RuntimeSettingsManager>()
                                 .AddSingleton<ISerialProcessor, SerialDataProcessor>()
                                 .AddSingleton<IModuleIO, ModuleIO>()
-                                .AddSingleton<IDataAggregator, DataAggregator>()
                                 .AddSingleton<ISignalRClient, ModuleClient>()
                                 .AddHostedService<ModuleService>();
                     })

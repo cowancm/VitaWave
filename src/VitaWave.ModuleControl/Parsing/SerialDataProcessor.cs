@@ -17,13 +17,6 @@ namespace VitaWave.ModuleControl.Parsing
         private SemaphoreSlim _signal = new SemaphoreSlim(0);
         private CancellationTokenSource? _cts = null;
 
-        private readonly IDataAggregator _dataAggregator;
-
-        public SerialDataProcessor(IDataAggregator dataAggregator) 
-        {
-            _dataAggregator = dataAggregator;
-        }
-
         public void AddToQueue(byte[] buffer, FrameHeader header)
         {
             _frameBuffer[_writeIndex] = (buffer, header);

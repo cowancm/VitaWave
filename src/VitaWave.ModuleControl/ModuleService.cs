@@ -4,7 +4,6 @@ using VitaWave.ModuleControl.Interfaces;
 
 internal class ModuleService : BackgroundService
 {
-    private readonly IDataAggregator _aggregator;
     private readonly ISignalRClient _signalRClient;
     private readonly IModuleIO _moduleIO;
     private readonly ISerialProcessor _serialProcessor;
@@ -13,12 +12,10 @@ internal class ModuleService : BackgroundService
     private readonly ModuleClient moduleClient;
 
     public ModuleService(
-        IDataAggregator aggregator,
         ISignalRClient client,
         ISerialProcessor serialProcessor,
         IModuleIO moduleIO)
     {
-        _aggregator = aggregator;
         _signalRClient = client;
         _serialProcessor = serialProcessor;
         _moduleIO = moduleIO;
