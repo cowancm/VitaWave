@@ -35,7 +35,6 @@ internal class ModuleService : BackgroundService
             await _signalRClient.StartAsync();
             var status = _moduleIO.InitializePorts();
 
-
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
         catch (OperationCanceledException)
