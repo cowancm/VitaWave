@@ -1,5 +1,6 @@
 ﻿using VitaWave.Common.APIToWebserver;
 using VitaWave.Common.ModuleToAPI;
+using VitaWave.Common.ModuleToAPI.TLVs;
 
 namespace VitaWave.Data
 {
@@ -9,6 +10,13 @@ namespace VitaWave.Data
         {
             var points = new List<PersonPoint>();
             points.AddRange(eventPacket.Points);
+            return points;
+        }
+
+        public static List<PersonPoint> ToPersonPointSet(this List<ParsedPoint> parsedPoints)
+        {
+            var points = new List<PersonPoint>();
+            points.AddRange(parsedPoints);
             return points;
         }
 

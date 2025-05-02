@@ -31,7 +31,7 @@ namespace VitaWave.ModuleControl.Client
                 return Task.CompletedTask;
             };
 
-            _connection.On("ModuleConnectionRequest", async () =>
+            _connection.On("OnModuleConnectionRequest", async () =>
             {
                 await ModuleConnectionRequest();
             });
@@ -65,7 +65,7 @@ namespace VitaWave.ModuleControl.Client
 
         public async Task SendDataAsync(object data)
         {
-            await _connection.SendAsync("RecieveModuleData", data);
+            await _connection.SendAsync("OnRecieveModuleData", data);
         }
 
         public async Task ModuleConnectionRequest()
@@ -75,7 +75,7 @@ namespace VitaWave.ModuleControl.Client
 
         private async Task SendStatusAsync(string status)
         {
-            await _connection.SendAsync("RecieveModuleStatus", status);
+            await _connection.SendAsync("OnReceiveModuleStatus", status);
         }
 
         public void SubscribeToModuleStatus(IModuleIO io)

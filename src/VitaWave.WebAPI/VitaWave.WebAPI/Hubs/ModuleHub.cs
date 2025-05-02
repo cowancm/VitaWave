@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using VitaWave.Common.ModuleToAPI;
 
 namespace VitaWave.WebAPI.Hubs
 {
@@ -13,6 +14,12 @@ namespace VitaWave.WebAPI.Hubs
         {
             Console.WriteLine($"[Server] Received message from client: {message}");
             await Clients.Caller.SendAsync("ReceiveWebpageRequest", message);
+        }
+
+
+        public async Task OnRecieveModuleData(EventPacket dataPacket)
+        {
+            
         }
     }
 }
