@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace VitaWave.Common.ModuleToAPI
+namespace VitaWave.Data
 {
-    public class ModuleInfo
+    internal class DataAggregator
     {
     }
 }

@@ -63,9 +63,10 @@ namespace VitaWave.ModuleControl.Client
             }
         }
 
+        const string SendDataMethodName = "OnRecieveModuleData";
         public async Task SendDataAsync(object data)
         {
-            await _connection.SendAsync("OnRecieveModuleData", data);
+            await _connection.SendAsync(SendDataMethodName, data);
         }
 
         public async Task ModuleConnectionRequest()
@@ -73,9 +74,10 @@ namespace VitaWave.ModuleControl.Client
             await SendStatusAsync(_IO?.Status.ToString() ?? "Unknown");
         }
 
+        const string SendDataModuleStatusName = "OnReceiveModuleStatus";
         private async Task SendStatusAsync(string status)
         {
-            await _connection.SendAsync("OnReceiveModuleStatus", status);
+            await _connection.SendAsync(SendDataModuleStatusName, status);
         }
 
         public void SubscribeToModuleStatus(IModuleIO io)

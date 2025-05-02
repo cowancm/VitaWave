@@ -1,3 +1,4 @@
+using VitaWave.WebAPI;
 using VitaWave.WebAPI.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<DataFacilitator>();
 
 var app = builder.Build();
 

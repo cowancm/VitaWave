@@ -5,21 +5,26 @@ namespace VitaWave.WebAPI.Hubs
 {
     public class ModuleHub : Hub
     {
+        private readonly DataFacilitator _dataFacilitator;
+
+        public ModuleHub(DataFacilitator dataFacilitator) 
+        {
+            _dataFacilitator = dataFacilitator;
+        }
+
         public async Task RecieveModuleData(string data)
         {
             await Clients.All.SendAsync("Module", $"Message Recieved from the server!:\n {data}");
         }
 
-        public async Task ReceiveWebpageRequest(string message)
-        {
-            Console.WriteLine($"[Server] Received message from client: {message}");
-            await Clients.Caller.SendAsync("ReceiveWebpageRequest", message);
-        }
-
-
         public async Task OnRecieveModuleData(EventPacket dataPacket)
         {
-            
+            await _dataFacilitator.OnNewData(dataPacket);
+        }
+
+        public async Task OnReceiveModuleStatus(string status)
+        {
+            //TODO
         }
     }
 }
