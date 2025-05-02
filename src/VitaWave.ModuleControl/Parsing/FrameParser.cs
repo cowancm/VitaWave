@@ -81,10 +81,10 @@ namespace VitaWave.ModuleControl.Parsing
         private const int LENGTH_PER_POINT_CLOUD = 8;
         private const int LENGTH_PER_POINT_UNITS = 20;
 
-        private static List<Point> CreatePointCloud(Span<byte> data)
+        private static List<ParsedPoint> CreatePointCloud(Span<byte> data)
         {
             var numPoints = (data.Length - LENGTH_PER_POINT_UNITS) / LENGTH_PER_POINT_CLOUD; //first couple bytes are the point unit, then the rest are points
-            var points = new List<Point>();
+            var points = new List<ParsedPoint>();
 
             var elevationUnit = MemoryMarshal.Read<float>(data.Slice(0, 4));
             var azmithUnit = MemoryMarshal.Read<float>(data.Slice(4, 4));
@@ -104,12 +104,12 @@ namespace VitaWave.ModuleControl.Parsing
             return points;
         }
 
-        private static Point CreatePoint(Span<byte> data, float elevationUnit, float azimuthUnit, float dopplerUnit, float rangeUnit, float snrUnit)
+        private static ParsedPoint CreatePoint(Span<byte> data, float elevationUnit, float azimuthUnit, float dopplerUnit, float rangeUnit, float snrUnit)
         {
             var elevation = elevationUnit * (double)(sbyte)data[0];
             var azimuth = azimuthUnit * (double)(sbyte)data[1];
             var range = rangeUnit * (double)MemoryMarshal.Read<Int16>(data.Slice(4, 2));
-            var point = new Point()
+            var point = new ParsedPoint()
             {
                 X = range * Math.Sin(azimuth) * Math.Cos(elevation),
                 Y = range * Math.Cos(azimuth) * Math.Cos(elevation),

@@ -4,11 +4,11 @@ namespace VitaWave.Common.ModuleToAPI
 {
     public record EventPacket
     {
-        public List<Point> Points;
+        public List<ParsedPoint> Points;
         public List<Target> Targets;
         public List<TargetHeight> TargetHeights;
 
-        public EventPacket(List<Point> points, List<Target> targets, List<TargetHeight> heights) 
+        public EventPacket(List<ParsedPoint> points, List<Target> targets, List<TargetHeight> heights) 
         {
             Points = points;
             Targets = targets;

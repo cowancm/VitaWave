@@ -13,7 +13,7 @@ namespace VitaWave.ModuleControl.Parsing
 
         public static EventPacket Map(ParsingEvent pEvent)
         {
-            return new EventPacket(pEvent.Points ?? new List<Point>(), pEvent.Targets ?? new List<Target>(), pEvent.Heights ?? new List<TargetHeight>());
+            return new EventPacket(pEvent.Points ?? new List<ParsedPoint>(), pEvent.Targets ?? new List<Target>(), pEvent.Heights ?? new List<TargetHeight>());
         }
 
     }
