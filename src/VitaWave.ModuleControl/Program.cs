@@ -7,6 +7,7 @@ using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing;
 using VitaWave.ModuleControl.Settings;
 using Microsoft.Extensions.Configuration;
+using VitaWave.ModuleControl.Simulating;
 
 namespace ModuleControl
 {

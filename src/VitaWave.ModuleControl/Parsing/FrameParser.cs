@@ -155,9 +155,9 @@ namespace VitaWave.ModuleControl.Parsing
             var target = new Target()
             {
                 TID = MemoryMarshal.Read<uint>(data.Slice(0, 4)),
-                PosX = MemoryMarshal.Read<float>(data.Slice(4, 4)),
-                PosY = MemoryMarshal.Read<float>(data.Slice(8, 4)),
-                PosZ = MemoryMarshal.Read<float>(data.Slice(12, 4)),
+                X = MemoryMarshal.Read<float>(data.Slice(4, 4)),
+                Y = MemoryMarshal.Read<float>(data.Slice(8, 4)),
+                Z = MemoryMarshal.Read<float>(data.Slice(12, 4)),
                 VelX = MemoryMarshal.Read<float>(data.Slice(16, 4)),
                 VelY = MemoryMarshal.Read<float>(data.Slice(20, 4)),
                 VelZ = MemoryMarshal.Read<float>(data.Slice(24, 4)),

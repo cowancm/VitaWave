@@ -9,14 +9,14 @@ namespace VitaWave.Data
         public static List<PersonPoint> ToPersonPointSet(this EventPacket eventPacket)
         {
             var points = new List<PersonPoint>();
-            points.AddRange(eventPacket.Points);
+            points.AddRange(eventPacket.Targets);
             return points;
         }
 
-        public static List<PersonPoint> ToPersonPointSet(this List<ParsedPoint> parsedPoints)
+        public static List<PersonPoint> ToPersonPointSet(this List<Target> targets)
         {
             var points = new List<PersonPoint>();
-            points.AddRange(parsedPoints);
+            points.AddRange(targets);
             return points;
         }
 

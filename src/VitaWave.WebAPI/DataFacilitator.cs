@@ -16,7 +16,6 @@ namespace VitaWave.WebAPI
             _webHub = webHub;
         }
 
-
         const string RawVisualizerMethodName = "OnUnfilteredPoints";
         const string FilteredVisualizerMethodName = "OnFilteredPoints";
         public async Task OnNewData(EventPacket eventPacket)
@@ -25,8 +24,9 @@ namespace VitaWave.WebAPI
             await _webHub.Clients.All.SendAsync(RawVisualizerMethodName, visualizerPoints);
             
             //TODO
-            //await _webHub.Clients.All.SendAsync(FilteredVisualizerMethodName, foo);
-            //most likely will be a bit diff than this though
+            //aggregate data somehow, prolly some type of IDataAggregor that takes this eventpacket
+            //either await response from the aggregator, or fire and forget and the aggregator calls on
+            //the data facilitator when there is an update. maybe will need a queue system...?
         }
 
     }

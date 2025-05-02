@@ -12,11 +12,6 @@ namespace VitaWave.WebAPI.Hubs
             _dataFacilitator = dataFacilitator;
         }
 
-        public async Task RecieveModuleData(string data)
-        {
-            await Clients.All.SendAsync("Module", $"Message Recieved from the server!:\n {data}");
-        }
-
         public async Task OnRecieveModuleData(EventPacket dataPacket)
         {
             await _dataFacilitator.OnNewData(dataPacket);

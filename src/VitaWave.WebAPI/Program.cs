@@ -1,7 +1,13 @@
+using Serilog;
 using VitaWave.WebAPI;
 using VitaWave.WebAPI.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+                    .MinimumLevel.Information()
+                    .WriteTo.Console()
+                    .CreateLogger();
 
 // Add services to the container.
 

@@ -1,11 +1,10 @@
-﻿namespace VitaWave.Common.ModuleToAPI.TLVs
+﻿using VitaWave.Common.APIToWebserver;
+
+namespace VitaWave.Common.ModuleToAPI.TLVs
 {
-    public record Target
+    public record Target : PersonPoint
     {
-        public uint TID { get; init; }
-        public float PosX { get; init; }
-        public float PosY { get; init; }
-        public float PosZ { get; init; }
+        public float Z { get; init; }
         public float VelX { get; init; }
         public float VelY { get; init; }
         public float VelZ { get; init; }

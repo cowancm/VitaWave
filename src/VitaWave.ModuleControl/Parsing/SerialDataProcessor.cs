@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using VitaWave.Common.ModuleToAPI;
 using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing.TLVs;
@@ -136,7 +137,11 @@ namespace VitaWave.ModuleControl.Parsing
                 }
                 if (_old != null)
                 {
-                    await _client.SendDataAsync(_old);
+                    //TODO, move this somewhere else
+                    await _client.SendDataAsync(new EventPacket(_old.Points ?? new(),
+                                                                _old.Targets ?? new(),
+                                                                _old.Heights ?? new(),
+                                                                _old.PresenceIndication));
                     ConsoleHelpers.PrintTargetIndication(newEvent);
                 }
                 _old = newEvent;

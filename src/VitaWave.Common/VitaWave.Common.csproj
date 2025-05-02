@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Folder Include="APIToModule\" />
+    <Folder Include="APIToWebserver\" />
   </ItemGroup>
 
 </Project>
