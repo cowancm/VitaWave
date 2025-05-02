@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using VitaWave.ModuleControl.Parsing.TLVs;
+using VitaWave.Common.ModuleToAPI.TLVs;
 using static VitaWave.ModuleControl.Parsing.TLVs.TLV_Constants;
 
 namespace VitaWave.ModuleControl.Parsing

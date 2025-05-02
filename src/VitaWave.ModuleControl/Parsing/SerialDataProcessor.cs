@@ -17,6 +17,13 @@ namespace VitaWave.ModuleControl.Parsing
         private SemaphoreSlim _signal = new SemaphoreSlim(0);
         private CancellationTokenSource? _cts = null;
 
+        private readonly ISignalRClient _client;
+
+        public SerialDataProcessor(ISignalRClient _client)
+        {
+            this._client = _client;
+        }
+
         public void AddToQueue(byte[] buffer, FrameHeader header)
         {
             _frameBuffer[_writeIndex] = (buffer, header);
@@ -103,7 +110,7 @@ namespace VitaWave.ModuleControl.Parsing
         /// </summary>
         /// <param name="tlvBuffer"></param>
         /// <param name="frameHeader"></param>
-        private void CreateNewSendLast(byte[] tlvBuffer, FrameHeader frameHeader)
+        private async void CreateNewSendLast(byte[] tlvBuffer, FrameHeader frameHeader)
         {
             try
             {
@@ -129,9 +136,7 @@ namespace VitaWave.ModuleControl.Parsing
                 }
                 if (_old != null)
                 {
-                    //BIG TODO: send this to the aggregator
-
-                    //for now for testing, let's send this to the console
+                    await _client.SendDataAsync(_old);
                     ConsoleHelpers.PrintTargetIndication(newEvent);
                 }
                 _old = newEvent;

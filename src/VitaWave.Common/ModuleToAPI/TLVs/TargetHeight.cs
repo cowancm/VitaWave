@@ -1,4 +1,4 @@
-﻿namespace VitaWave.ModuleControl.Parsing.TLVs
+﻿namespace VitaWave.Common.ModuleToAPI.TLVs
 {
     public record TargetHeight
     {

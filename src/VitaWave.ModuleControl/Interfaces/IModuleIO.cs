@@ -2,7 +2,7 @@
 {
     public interface IModuleIO
     {
-        event EventHandler? OnConnectionLost;
+        event EventHandler? OnModuleStatusChanged;
 
         State Status { get; }
         State InitializePorts();

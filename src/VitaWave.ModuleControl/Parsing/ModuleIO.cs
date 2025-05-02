@@ -4,10 +4,12 @@ using Serilog;
 using VitaWave.ModuleControl.Utils;
 using VitaWave.ModuleControl.Parsing.TLVs;
 using VitaWave.ModuleControl.Interfaces;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace VitaWave.ModuleControl.Parsing
 {
-    public sealed class ModuleIO : IModuleIO
+    public class ModuleIO : IModuleIO, INotifyPropertyChanged
     {
         public ModuleIO(IRuntimeSettingsManager settingsManager, ISerialProcessor serialDataProcessor)
         {
@@ -18,8 +20,27 @@ namespace VitaWave.ModuleControl.Parsing
             Status = State.AwaitingPortInit;
         }
 
-        public event EventHandler? OnConnectionLost;
-        public State Status { get; private set; }
+        public event EventHandler? OnModuleStatusChanged;
+        private State _status;
+        public State Status
+        {
+            get => _status;
+            set
+            {
+                if (_status != value)
+                {
+                    _status = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         private string? _dataPortName;
         private string? _cliPortName;
@@ -128,7 +149,6 @@ namespace VitaWave.ModuleControl.Parsing
                 _cts = new();
                 Status = State.AwaitingPortInit;
                 _pollSerialTask = null;
-                OnConnectionLost?.Invoke(this, EventArgs.Empty);
                 ClosePorts();
             }
             return Status;

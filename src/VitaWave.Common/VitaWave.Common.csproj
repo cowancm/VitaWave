@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="ModuleToAPI\" />
     <Folder Include="APIToModule\" />
     <Folder Include="APIToWebserver\" />
   </ItemGroup>

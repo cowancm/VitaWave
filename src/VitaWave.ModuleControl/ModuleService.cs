@@ -9,8 +9,6 @@ internal class ModuleService : BackgroundService
     private readonly ISerialProcessor _serialProcessor;
     private readonly ConsoleController _consoleController;
 
-    private readonly ModuleClient moduleClient;
-
     public ModuleService(
         ISignalRClient client,
         ISerialProcessor serialProcessor,

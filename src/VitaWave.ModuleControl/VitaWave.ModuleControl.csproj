@@ -22,4 +22,7 @@
 			<Link>%(Filename)%(Extension)</Link>
 		</None>
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\VitaWave.Common\VitaWave.Common.csproj" />
+	</ItemGroup>
 </Project>
