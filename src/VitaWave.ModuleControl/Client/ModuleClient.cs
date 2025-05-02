@@ -8,7 +8,7 @@ namespace VitaWave.ModuleControl.Client
     {
         private HubConnection _connection;
         private IModuleIO? _IO;
-        const string serverURL = "http://localhost:5278/moduleHub"; //this is going in a settings file at some point.
+        const string serverURL = "http://localhost:5278/module"; //this is going in a settings file at some point.
 
         public ModuleClient()
         {

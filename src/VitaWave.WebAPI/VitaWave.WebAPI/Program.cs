@@ -1,4 +1,4 @@
-using VitaWave.WebAPI;
+using VitaWave.WebAPI.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +38,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHub<ModuleHub>("/moduleHub");
+app.MapHub<ModuleHub>("/module");
+app.MapHub<WebHub>("/web");
 
 app.Run();
