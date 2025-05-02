@@ -26,9 +26,8 @@ internal class ModuleService : BackgroundService
         {
             _consoleController.Start();
             _serialProcessor.Run();
-
             await _signalRClient.StartAsync();
-            var status = _moduleIO.InitializePorts();
+            _signalRClient.SubscribeToModuleStatus(_moduleIO);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }

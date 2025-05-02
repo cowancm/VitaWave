@@ -32,9 +32,9 @@ namespace ModuleControl
                     .ConfigureServices((context, services) =>
                     {
                         services.AddSingleton<IRuntimeSettingsManager, RuntimeSettingsManager>()
+                                .AddSingleton<ISignalRClient, ModuleClient>()
                                 .AddSingleton<ISerialProcessor, SerialDataProcessor>()
                                 .AddSingleton<IModuleIO, ModuleIO>()
-                                .AddSingleton<ISignalRClient, ModuleClient>()
                                 .AddHostedService<ModuleService>();
                     })
                     .RunConsoleAsync();

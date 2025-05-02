@@ -16,11 +16,10 @@ namespace VitaWave.ModuleControl.Parsing
             _settingsManager = settingsManager;
             _serialDataProcessor = serialDataProcessor;
 
-            ChangePortSettings();
+            ChangePortSettings(); //init
             Status = State.AwaitingPortInit;
         }
 
-        public event EventHandler? OnModuleStatusChanged;
         private State _status;
         public State Status
         {

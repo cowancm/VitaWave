@@ -19,9 +19,9 @@ namespace VitaWave.ModuleControl.Parsing
 
         private readonly ISignalRClient _client;
 
-        public SerialDataProcessor(ISignalRClient _client)
+        public SerialDataProcessor(ISignalRClient client)
         {
-            this._client = _client;
+            _client = client;
         }
 
         public void AddToQueue(byte[] buffer, FrameHeader header)

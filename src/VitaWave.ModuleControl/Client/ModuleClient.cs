@@ -1,10 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using VitaWave.ModuleControl.Interfaces;
 
 namespace VitaWave.ModuleControl.Client
@@ -12,24 +7,20 @@ namespace VitaWave.ModuleControl.Client
     internal class ModuleClient : ISignalRClient
     {
         private HubConnection _connection;
-        private readonly IModuleIO _IO;
+        private IModuleIO? _IO;
         const string serverURL = "http://localhost:5278/moduleHub"; //this is going in a settings file at some point.
 
-        public ModuleClient(IModuleIO io)
+        public ModuleClient()
         {
-            _IO = io;
-            _IO.OnModuleStatusChanged += _IO_OnConnectionStatusChanged;
-
             _connection = new HubConnectionBuilder()
                 .WithUrl(serverURL)
                 .Build();
 
-            _connection.On<string>("Module", (data) =>
+            _connection.On("ModuleConnectionRequest", async () =>
             {
-                Log.Information("Data received: " + data);
+                await ModuleConnectionRequest();
             });
         }
-
 
 
         public async Task StartAsync()
@@ -42,13 +33,31 @@ namespace VitaWave.ModuleControl.Client
             await _connection.SendAsync("RecieveModuleData", data);
         }
 
-        public async Task OnRecieveFromServer(string data)
+        public async Task ModuleConnectionRequest()
         {
+            await SendStatusAsync(_IO?.Status.ToString() ?? "Unknown");
         }
 
-        private async void _IO_OnConnectionStatusChanged(object? sender, EventArgs e)
+        private async Task SendStatusAsync(string status)
         {
-            await _connection.SendAsync("Recie");
+            await _connection.SendAsync("RecieveModuleStatus", status);
+        }
+
+        public void SubscribeToModuleStatus(IModuleIO io)
+        {
+            if (_IO is null)
+            {
+                _IO = io;
+            }
+
+            io.PropertyChanged += async (sender, args) =>
+            {
+                if (args.PropertyName == nameof(io.Status))
+                {
+                    var status = io.Status;
+                    await SendStatusAsync(status.ToString());
+                }
+            };
         }
     }
 }

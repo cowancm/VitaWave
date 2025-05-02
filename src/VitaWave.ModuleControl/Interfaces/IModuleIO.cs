@@ -1,8 +1,10 @@
-﻿namespace VitaWave.ModuleControl.Interfaces
+﻿using System.ComponentModel;
+
+namespace VitaWave.ModuleControl.Interfaces
 {
     public interface IModuleIO
     {
-        event EventHandler? OnModuleStatusChanged;
+        event PropertyChangedEventHandler? PropertyChanged;
 
         State Status { get; }
         State InitializePorts();
