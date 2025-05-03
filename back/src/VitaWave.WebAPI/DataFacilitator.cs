@@ -2,6 +2,8 @@
 using VitaWave.Common.ModuleToAPI;
 using VitaWave.WebAPI.Hubs;
 using VitaWave.Data;
+using Serilog;
+using VitaWave.Common.APIToWebserver;
 
 namespace VitaWave.WebAPI
 {
@@ -21,6 +23,10 @@ namespace VitaWave.WebAPI
         public async Task OnNewData(EventPacket eventPacket)
         {
             var visualizerPoints = eventPacket.ToPersonPointSet();
+
+            var jsonString = System.Text.Json.JsonSerializer.Serialize(visualizerPoints);
+            Log.Information($"Sending: {jsonString}");
+
             await _webHub.Clients.All.SendAsync(RawVisualizerMethodName, visualizerPoints);
             
             //TODO
