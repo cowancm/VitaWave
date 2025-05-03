@@ -1,0 +1,6 @@
+@VitaWave.WebAPI_HostAddress = http://localhost:5278
+
+GET {{VitaWave.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
