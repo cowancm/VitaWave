@@ -12,7 +12,6 @@ namespace VitaWave.ModuleControl.Simulating
     public class FakeDataPusher
     {
         private readonly ISignalRClient _client;
-
         public FakeDataPusher(ISignalRClient client)
         {
             _client = client;

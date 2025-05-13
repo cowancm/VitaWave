@@ -119,7 +119,7 @@ public class ConsoleController
                 break;
 #if DEBUG
             case "fake":
-                await _fakeDataPusher.PushData();
+                await FakeDataSimulator.RunFakeDataSimLoop(token, _fakeDataPusher);
                 break;
 #endif
 
