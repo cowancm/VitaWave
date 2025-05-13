@@ -7,7 +7,7 @@ using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Simulating;
 
-internal static class FakeDataSimulator
+internal static class ConsoleFakeDataSimulator
 {
     static bool stop;
 
@@ -49,6 +49,15 @@ internal static class FakeDataSimulator
 
         switch (input.ToLower())
         {
+            case "loop":
+                Console.WriteLine($"Sending default fake data. Hold a key to stop");
+                while (!Console.KeyAvailable)
+                {
+                    await pusher.PushData(FakeData.CreateSingle());
+                    await Task.Delay(500, token);
+                }
+                Console.ReadLine();
+                break;
             case "exit":
                 stop = true;    
                 break;
