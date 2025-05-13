@@ -12,13 +12,13 @@ namespace VitaWave.ModuleControl.Client
         private HubConnection _connection;
         private IModuleIO? _IO;
         const string serverURL = "http://localhost:5278/module"; //this is going in a settings file at some point.
-        const int MaxInitialConnectAttempts = 5;
+        const int MaxInitialConnectAttempts = int.MaxValue;
 
         public ModuleClient()
         {
             _connection = new HubConnectionBuilder()
                 .WithUrl(serverURL)
-                .WithAutomaticReconnect() //0s, 2s, 10s, 30s
+                .WithAutomaticReconnect(new ReconnectPolicy()) //reconnects every 2 seconds
                 .Build();
 
             _connection.Reconnecting += (error) =>
@@ -55,7 +55,7 @@ namespace VitaWave.ModuleControl.Client
                 catch (Exception ex)
                 {
                     Log.Warning($"Server connection attempt {attempt} failed to connect.", ex.Message);
-                    await Task.Delay(2000 * attempt);
+                    await Task.Delay(5000 * attempt);
                 }
             }
 
