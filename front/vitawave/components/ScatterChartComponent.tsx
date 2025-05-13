@@ -24,16 +24,18 @@ function getLatestPoints(points: PersonPoint[]): PersonPoint[] {
   }
   return Array.from(latestMap.values());
 }
-
+ 
 // Function to generate and assign a consistent color per TID
 function getColorForTid(tid: number): string {
   if (!tidColorMap.has(tid)) {
-    const color = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'); // random hex color
+    const hue = Math.floor(Math.random() * 360);         // Hue: 0–359
+    const saturation = 80 + Math.random() * 20;           // Saturation: 80–100%
+    const lightness = 50 + Math.random() * 20;            // Lightness: 50–70%
+    const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
     tidColorMap.set(tid, color);
   }
   return tidColorMap.get(tid)!;
 }
-
 
 export default function ScatterChartComponent() {
   const [points, setPoints] = useState<PersonPoint[]>([]);
