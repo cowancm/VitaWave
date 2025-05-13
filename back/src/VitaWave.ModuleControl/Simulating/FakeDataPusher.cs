@@ -20,12 +20,15 @@ namespace VitaWave.ModuleControl.Simulating
             _client = client;
         }
 
-        public async Task PushData()
+        public async Task PushData(EventPacket? packet = null)
         {
-            await _client.SendDataAsync(CreateFakeEventPacket());
+            if (packet == null)
+                packet = CreateSingle();
+
+            await _client.SendDataAsync(packet);
         }
 
-        private EventPacket CreateFakeEventPacket()
+        public static EventPacket CreateSingle()
         {
             return new EventPacket()
             {
