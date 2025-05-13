@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using VitaWave.Common.ModuleToAPI;
+﻿using VitaWave.Common.ModuleToAPI;
+using VitaWave.Common.ModuleToAPI.TLVs;
 
 namespace VitaWave.ModuleControl.Simulating
 {
     internal class FakeData
     {
-
-
         public static EventPacket CreateSingle()
         {
             var rand = new Random();
