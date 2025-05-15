@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using System.Text.Json;
 using VitaWave.Common.ModuleToAPI;
 using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
@@ -137,12 +138,17 @@ namespace VitaWave.ModuleControl.Parsing
                 }
                 if (_old != null)
                 {
+                        var path = "C:/projects/data.json";
+                        string jsonString = JsonSerializer.Serialize(_old);
+                        File.WriteAllText(path, jsonString);
+
                     if(_client.Status == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
                         await _client.SendDataAsync(new EventPacket(_old.Points ?? new(),
                                                                     _old.Targets ?? new(),
                                                                     _old.Heights ?? new(),
                                                                     _old.PresenceIndication));
                     ConsoleHelpers.PrintTargetIndication(newEvent);
+                    //
                 }
                 _old = newEvent;
             }
