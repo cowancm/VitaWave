@@ -7,16 +7,24 @@ namespace VitaWave.ModuleControl.Settings
     internal class RuntimeSettingsManager : IRuntimeSettingsManager
     {
 
-        private string _fileName = "runtimesettings.json";
+        private string _fileName = "config.json";
 
-        public RuntimeSettings? GetSettings()
+        public Config? GetSettings()
         {
-            RuntimeSettings? settings = null;
+            Config? settings = null;
+
+
+            if (!File.Exists(_fileName))
+            {
+                settings = Config.Default;
+                SaveSettings(settings);
+                return settings;
+            }
 
             try
             {
                 var json = File.ReadAllText(_fileName);
-                settings = JsonSerializer.Deserialize<RuntimeSettings>(json) ?? throw new Exception();
+                settings = JsonSerializer.Deserialize<Config>(json) ?? throw new Exception();
             }
             catch (Exception ex)
             {
@@ -26,7 +34,7 @@ namespace VitaWave.ModuleControl.Settings
             return settings;
         }
 
-        public void SaveSettings(RuntimeSettings settings)
+        public void SaveSettings(Config settings)
         {
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_fileName, json);

@@ -26,7 +26,7 @@ namespace ModuleControl
                     .ConfigureAppConfiguration((context, config) =>
                     {
                         //lata
-                        //config.AddJsonFile("appsettings.json", optional: false)
+                        //Config.AddJsonFile("appsettings.json", optional: false)
                         //      .AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true)
                         //      .AddEnvironmentVariables();
                     })

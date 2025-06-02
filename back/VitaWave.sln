@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.WebAPI", "src\Vita
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.Common", "src\VitaWave.Common\VitaWave.Common.csproj", "{E7D735AE-E734-4CDC-B9D3-327084682E74}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.Data", "src\VitaWave.Data\VitaWave.Data.csproj", "{A0E8D17D-0B53-4EA3-AF97-CFCE65D29024}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.Data", "src\VitaWave.Data\VitaWave.Data\VitaWave.Data.csproj", "{527D38FB-363A-4FAE-9B4A-9A00138F2794}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +29,10 @@ Global
 		{E7D735AE-E734-4CDC-B9D3-327084682E74}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E7D735AE-E734-4CDC-B9D3-327084682E74}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E7D735AE-E734-4CDC-B9D3-327084682E74}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A0E8D17D-0B53-4EA3-AF97-CFCE65D29024}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A0E8D17D-0B53-4EA3-AF97-CFCE65D29024}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A0E8D17D-0B53-4EA3-AF97-CFCE65D29024}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A0E8D17D-0B53-4EA3-AF97-CFCE65D29024}.Release|Any CPU.Build.0 = Release|Any CPU
+		{527D38FB-363A-4FAE-9B4A-9A00138F2794}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{527D38FB-363A-4FAE-9B4A-9A00138F2794}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{527D38FB-363A-4FAE-9B4A-9A00138F2794}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{527D38FB-363A-4FAE-9B4A-9A00138F2794}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
