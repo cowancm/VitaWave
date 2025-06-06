@@ -276,34 +276,12 @@ namespace VitaWave.ModuleControl.Parsing
             }
         }
 
-        public async Task<bool> TryWriteConfigFromFile()
-        {
-            var currentDirectory = Directory.GetCurrentDirectory();
-            var files = Directory.GetFiles(currentDirectory, "*.cfg");
-            var configFile = files?.First();
-
-            if (configFile == null)
-            {
-                Log.Error("No config file found when trying to write config file.");
-                return false;
-            }
-            else if (files?.Length > 1)
-            {
-                Log.Error($"Multiple config files found, using \"{configFile}\"");
-            }
-
-            return await TryWriteConfigToModule(File.ReadAllLines(configFile));
-        }
-
-        public async Task<bool> TryWriteConfigFromFile(string[] configStrings)
-        {
-            return await TryWriteConfigToModule(configStrings);
-        }
-
         int _configLineSendTimeInMs = 10;
 
-        private async Task<bool> TryWriteConfigToModule(string[] configStrings)
+        public async Task<bool> TryWriteConfigToModule()
         {
+            
+
             if (_cliPort == null || !_cliPort.IsOpen)
             {
                 Stop();
@@ -313,7 +291,9 @@ namespace VitaWave.ModuleControl.Parsing
 
             try
             {
-                foreach (var line in configStrings)
+                var lines = File.ReadAllLines(SettingsManager.GetModuleConfigPath());
+
+                foreach (var line in lines)
                 {
                     if (!line.Contains('%') && !string.IsNullOrEmpty(line) && !(line == "\n"))
                     {
@@ -327,7 +307,7 @@ namespace VitaWave.ModuleControl.Parsing
             catch (Exception ex)
             {
                 Stop();
-                Log.Error(ex, $"CLI Port: [{_cliPort.PortName}] failed to connect.");
+                Log.Error(ex, "");
                 return false;
             }
             return true;

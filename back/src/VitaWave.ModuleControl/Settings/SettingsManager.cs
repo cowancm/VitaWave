@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using VitaWave.ModuleControl.Interfaces;
 
@@ -7,7 +8,7 @@ namespace VitaWave.ModuleControl.Settings
 {
     internal static class SettingsManager
     {
-        private const string _fileName = "settings.json";
+        private const string _settingsFileName = "settings.json";
         private const string _folder = "vitawave";
 
         private static string _filePath;
@@ -20,7 +21,7 @@ namespace VitaWave.ModuleControl.Settings
                 if (!Directory.Exists(winPath))
                     Directory.CreateDirectory(winPath);
 
-                _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), _folder, _fileName);
+                _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), _folder);
             }
             else
             {
@@ -35,7 +36,7 @@ namespace VitaWave.ModuleControl.Settings
             Config? settings = null;
 
 
-            if (!File.Exists(_filePath))
+            if (!File.Exists(Path.Combine(_filePath, _settingsFileName)))
             {
                 settings = Config.Default;
                 SaveSettings(settings);
@@ -44,7 +45,7 @@ namespace VitaWave.ModuleControl.Settings
 
             try
             {
-                var json = File.ReadAllText(_fileName);
+                var json = File.ReadAllText(Path.Combine(_filePath, _settingsFileName));
                 settings = JsonSerializer.Deserialize<Config>(json) ?? throw new Exception();
             }
             catch (Exception ex)
@@ -58,7 +59,12 @@ namespace VitaWave.ModuleControl.Settings
         public static void SaveSettings(Config settings)
         {
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_filePath, json);
+            File.WriteAllText(Path.Combine(_filePath, _settingsFileName), json);
+        }
+
+        public static string GetModuleConfigPath()
+        {
+            return Directory.GetFiles(Path.Combine(_filePath), "*.cfg").First();
         }
     }
 }

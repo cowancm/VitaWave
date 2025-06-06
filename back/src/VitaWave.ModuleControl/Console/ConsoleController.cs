@@ -109,7 +109,7 @@ public class ConsoleController
                 break;
 
             case "config":
-                var result = (await _moduleIO.TryWriteConfigFromFile()) ? "Success" : "Failed";
+                var result = (await _moduleIO.TryWriteConfigToModule()) ? "Success" : "Failed";
                 Console.WriteLine($"Configuration written to module. Result: {result}");
                 break;
 
