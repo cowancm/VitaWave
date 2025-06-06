@@ -1,5 +1,5 @@
 ﻿using VitaWave.Common;
-using VitaWave.Common.ModuleToAPI.TLVs;
+using VitaWave.Common.TLVs;
 
 namespace VitaWave.ModuleControl.Simulating
 {

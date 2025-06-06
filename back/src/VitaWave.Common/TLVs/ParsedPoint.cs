@@ -1,6 +1,4 @@
-﻿using VitaWave.Common.APIToWebserver;
-
-namespace VitaWave.Common.TLVs
+﻿namespace VitaWave.Common.TLVs
 {
     public record ParsedPoint
     {

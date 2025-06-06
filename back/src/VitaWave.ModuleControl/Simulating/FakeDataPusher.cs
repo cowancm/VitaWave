@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VitaWave.Common;
-using VitaWave.Common.ModuleToAPI.TLVs;
 using VitaWave.ModuleControl.Interfaces;
 
 namespace VitaWave.ModuleControl.Simulating

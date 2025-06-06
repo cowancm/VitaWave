@@ -15,6 +15,8 @@ namespace ModuleControl
     {
         static async Task Main(string[] args)
         {
+            SettingsManager.GetSettings();
+
             try
             {
                 Log.Logger = new LoggerConfiguration()
@@ -32,8 +34,7 @@ namespace ModuleControl
                     })
                     .ConfigureServices((context, services) =>
                     {
-                        services.AddSingleton<IRuntimeSettingsManager, RuntimeSettingsManager>()
-                                .AddSingleton<ISignalRClient, ModuleClient>()
+                        services.AddSingleton<ISignalRClient, ModuleClient>()
                                 .AddSingleton<ISerialProcessor, SerialDataProcessor>()
                                 .AddSingleton<IModuleIO, ModuleIO>()
                                 .AddHostedService<ModuleService>();
