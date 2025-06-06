@@ -1,4 +1,4 @@
-﻿using VitaWave.Common.ModuleToAPI;
+﻿using VitaWave.Common;
 using VitaWave.Common.ModuleToAPI.TLVs;
 
 namespace VitaWave.ModuleControl.Simulating
