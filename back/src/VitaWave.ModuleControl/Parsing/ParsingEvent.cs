@@ -1,5 +1,5 @@
 ﻿using VitaWave.ModuleControl.Parsing.TLVs;
-using VitaWave.Common.ModuleToAPI.TLVs;
+using VitaWave.Common.TLVs;
 
 namespace VitaWave.ModuleControl.Parsing
 {

@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using VitaWave.Common.ModuleToAPI;
-using VitaWave.Common.ModuleToAPI.TLVs;
+using VitaWave.Common;
 using VitaWave.ModuleControl.Interfaces;
 
 namespace VitaWave.ModuleControl.Simulating

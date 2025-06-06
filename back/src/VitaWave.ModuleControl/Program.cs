@@ -15,6 +15,8 @@ namespace ModuleControl
     {
         static async Task Main(string[] args)
         {
+            SettingsManager.GetSettings();
+
             try
             {
                 Log.Logger = new LoggerConfiguration()
@@ -26,14 +28,13 @@ namespace ModuleControl
                     .ConfigureAppConfiguration((context, config) =>
                     {
                         //lata
-                        //config.AddJsonFile("appsettings.json", optional: false)
+                        //Config.AddJsonFile("appsettings.json", optional: false)
                         //      .AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true)
                         //      .AddEnvironmentVariables();
                     })
                     .ConfigureServices((context, services) =>
                     {
-                        services.AddSingleton<IRuntimeSettingsManager, RuntimeSettingsManager>()
-                                .AddSingleton<ISignalRClient, ModuleClient>()
+                        services.AddSingleton<ISignalRClient, ModuleClient>()
                                 .AddSingleton<ISerialProcessor, SerialDataProcessor>()
                                 .AddSingleton<IModuleIO, ModuleIO>()
                                 .AddHostedService<ModuleService>();

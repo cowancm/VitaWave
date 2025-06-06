@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Serilog;
-using VitaWave.Common.ModuleToAPI;
 using VitaWave.ModuleControl.Interfaces;
-using VitaWave.ModuleControl.Parsing;
 
 namespace VitaWave.ModuleControl.Client
 {

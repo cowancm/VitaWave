@@ -1,5 +1,6 @@
-﻿using Serilog;
-using VitaWave.Common.ModuleToAPI;
+﻿using Microsoft.AspNetCore.SignalR.Client;
+using Serilog;
+using VitaWave.Common;
 using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing.TLVs;
@@ -137,12 +138,14 @@ namespace VitaWave.ModuleControl.Parsing
                 }
                 if (_old != null)
                 {
-                    if(_client.Status == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
-                        await _client.SendDataAsync(new EventPacket(_old.Points ?? new(),
-                                                                    _old.Targets ?? new(),
-                                                                    _old.Heights ?? new(),
-                                                                    _old.PresenceIndication));
-                    ConsoleHelpers.PrintTargetIndication(newEvent);
+                    if (_client.Status == HubConnectionState.Connected)
+                    {
+                        _ = _client.SendDataAsync(new EventPacket(_old.Points ?? new(),
+                                                                _old.Targets ?? new(),
+                                                                _old.Heights ?? new(),
+                                                                _old.PresenceIndication));
+                        ConsoleHelpers.PrintTargetIndication(newEvent);
+                    }
                 }
                 _old = newEvent;
             }

@@ -6,14 +6,14 @@ using VitaWave.ModuleControl.Parsing.TLVs;
 using VitaWave.ModuleControl.Interfaces;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using VitaWave.ModuleControl.Settings;
 
 namespace VitaWave.ModuleControl.Parsing
 {
     public class ModuleIO : IModuleIO, INotifyPropertyChanged
     {
-        public ModuleIO(IRuntimeSettingsManager settingsManager, ISerialProcessor serialDataProcessor)
+        public ModuleIO(ISerialProcessor serialDataProcessor)
         {
-            _settingsManager = settingsManager;
             _serialDataProcessor = serialDataProcessor;
 
             ChangePortSettings(); //init
@@ -49,14 +49,13 @@ namespace VitaWave.ModuleControl.Parsing
         private SerialPort? _cliPort;
         private Task? _pollSerialTask = null;
 
-        private readonly IRuntimeSettingsManager _settingsManager;
         private readonly ISerialProcessor _serialDataProcessor;
 
         const int DataBufferSizeInBytes = 16384;
 
         private void ChangePortSettings()
         {
-            var settings = _settingsManager.GetSettings();
+            var settings = SettingsManager.GetSettings();
 
             if (settings != null)
             {

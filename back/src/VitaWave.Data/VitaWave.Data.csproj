@@ -6,8 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\VitaWave.Common\VitaWave.Common.csproj" />
-  </ItemGroup>
-
 </Project>

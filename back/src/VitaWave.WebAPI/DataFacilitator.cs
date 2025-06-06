@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using VitaWave.Common.ModuleToAPI;
 using VitaWave.WebAPI.Hubs;
 using VitaWave.Data;
 using Serilog;
-using VitaWave.Common.APIToWebserver;
+using VitaWave.Common;
 
 namespace VitaWave.WebAPI
 {

@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Timers;
 
-namespace VitaWave.Common.APIToWebserver
+namespace VitaWave.Common
 {
     public record PersonPoint
     {

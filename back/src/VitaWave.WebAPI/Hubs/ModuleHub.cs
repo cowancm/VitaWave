@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using VitaWave.Common.ModuleToAPI;
+using VitaWave.Common;
 
 namespace VitaWave.WebAPI.Hubs
 {
