@@ -7,6 +7,7 @@ namespace VitaWave.ModuleControl.Settings
     {
         private const string _settingsFileName = "settings.json";
         private const string _folder = "vitawave";
+        private const string _congfigGlob = "*.cfg"; //anything w/ .cfg will work as a config
 
         private static string _filePath;
 
@@ -61,7 +62,7 @@ namespace VitaWave.ModuleControl.Settings
 
         public static string GetModuleConfigPath()
         {
-            return Directory.GetFiles(Path.Combine(_filePath), "*.cfg").First();
+            return Directory.GetFiles(Path.Combine(_filePath), _congfigGlob).First();
         }
     }
 }
