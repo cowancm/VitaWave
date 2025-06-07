@@ -280,8 +280,6 @@ namespace VitaWave.ModuleControl.Parsing
 
         public async Task<bool> TryWriteConfigToModule()
         {
-            
-
             if (_cliPort == null || !_cliPort.IsOpen)
             {
                 Stop();
