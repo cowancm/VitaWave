@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Serilog;
+using System.Net.Mail;
 using VitaWave.ModuleControl.Interfaces;
+using VitaWave.ModuleControl.Settings;
 
 namespace VitaWave.ModuleControl.Client
 {
@@ -9,6 +11,7 @@ namespace VitaWave.ModuleControl.Client
         public HubConnectionState Status => _connection.State;
         private HubConnection _connection;
         private IModuleIO? _IO;
+
         const string serverURL = "http://localhost:5278/module"; //this is going in a settings file at some point.
         const int MaxInitialConnectAttempts = int.MaxValue;
 
@@ -31,9 +34,9 @@ namespace VitaWave.ModuleControl.Client
                 return Task.CompletedTask;
             };
 
-            _connection.On("OnModuleConnectionRequest", async () =>
+            _connection.On("ModuleStatusRequest", async() =>
             {
-                await ModuleConnectionRequest();
+                await SendModuleStatusAsync();
             });
         }
 
@@ -49,6 +52,7 @@ namespace VitaWave.ModuleControl.Client
                     attempt++;
                     await _connection.StartAsync();
                     Log.Information("Server connection started");
+                    await SendIdentifier();
                 }
                 catch (Exception ex)
                 {
@@ -59,25 +63,26 @@ namespace VitaWave.ModuleControl.Client
 
             if (_connection.State != HubConnectionState.Connected)
             {
-                Log.Error($"Failed to establish server connection after {MaxInitialConnectAttempts} attempts.");
+                Log.Error($"Failed to establish server connection after {attempt} attempts.");
             }
         }
 
-        const string SendDataMethodName = "OnRecieveModuleData";
+        const string SendModuleDataName = "ModuleData";
         public async Task SendDataAsync(object data)
         {
-            await _connection.SendAsync(SendDataMethodName, data);
+            await _connection.SendAsync(SendModuleDataName, data);
         }
 
-        public async Task ModuleConnectionRequest()
+        const string SendModuleStatusName = "ModuleStatus";
+        private async Task SendModuleStatusAsync()
         {
-            await SendStatusAsync(_IO?.Status.ToString() ?? "Unknown");
+            await _connection.SendAsync(SendModuleStatusName, _IO?.Status.ToString() ?? "Unknown");
         }
 
-        const string SendDataModuleStatusName = "OnReceiveModuleStatus";
-        private async Task SendStatusAsync(string status)
+        const string SendIdentifierMethodName = "ModuleRegistration";
+        private async Task SendIdentifier()
         {
-            await _connection.SendAsync(SendDataModuleStatusName, status);
+            await _connection.SendAsync(SendIdentifierMethodName, SettingsManager.GetSettings()?.Identifier ?? "Unknown");
         }
 
         public void SubscribeToModuleStatus(IModuleIO io)
@@ -91,8 +96,7 @@ namespace VitaWave.ModuleControl.Client
             {
                 if (args.PropertyName == nameof(io.Status))
                 {
-                    var status = io.Status;
-                    await SendStatusAsync(status.ToString());
+                    await SendModuleStatusAsync();
                 }
             };
         }
