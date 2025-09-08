@@ -18,7 +18,7 @@ namespace VitaWave.ModuleControl.Client
         public ModuleClient()
         {
             _connection = new HubConnectionBuilder()
-                .WithUrl(serverURL)
+                .WithUrl(SettingsManager.GetNetworkSettings().API_Url)
                 .WithAutomaticReconnect(new ReconnectPolicy()) //reconnects every 2 seconds
                 .Build();
 
@@ -82,7 +82,7 @@ namespace VitaWave.ModuleControl.Client
         const string SendIdentifierMethodName = "ModuleRegistration";
         private async Task SendIdentifier()
         {
-            await _connection.SendAsync(SendIdentifierMethodName, SettingsManager.GetSettings()?.Identifier ?? "Unknown");
+            await _connection.SendAsync(SendIdentifierMethodName, SettingsManager.GetConfigSettings()?.Identifier ?? "Unknown");
         }
 
         public void SubscribeToModuleStatus(IModuleIO io)

@@ -15,7 +15,7 @@ namespace ModuleControl
     {
         static async Task Main(string[] args)
         {
-            SettingsManager.GetSettings();
+            SettingsManager.GetConfigSettings();
 
             try
             {

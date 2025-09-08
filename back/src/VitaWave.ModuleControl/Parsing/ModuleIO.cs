@@ -55,7 +55,7 @@ namespace VitaWave.ModuleControl.Parsing
 
         private void ChangePortSettings()
         {
-            var settings = SettingsManager.GetSettings();
+            var settings = SettingsManager.GetConfigSettings();
 
             if (settings != null)
             {
@@ -187,8 +187,6 @@ namespace VitaWave.ModuleControl.Parsing
 
         private void PollSerial(CancellationToken ct)
         {
-            Thread.CurrentThread.Priority = ThreadPriority.Highest;
-
             try
             {
                 while (!ct.IsCancellationRequested)
@@ -289,7 +287,7 @@ namespace VitaWave.ModuleControl.Parsing
 
             try
             {
-                var lines = File.ReadAllLines(SettingsManager.GetModuleConfigPath());
+                var lines = File.ReadAllLines(SettingsManager.GetTIConfigPath());
 
                 foreach (var line in lines)
                 {

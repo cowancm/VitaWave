@@ -18,7 +18,5 @@ namespace VitaWave.Data
             points.AddRange(targets);
             return points;
         }
-
-        //TODO: polymorph ToPersonPointSet() to extent to other event types
     }
 }

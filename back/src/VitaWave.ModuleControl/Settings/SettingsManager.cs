@@ -5,64 +5,74 @@ namespace VitaWave.ModuleControl.Settings
 {
     internal static class SettingsManager
     {
-        private const string _settingsFileName = "settings.json";
+        private const string _configFileName = "settings.json";
+        private const string _connectionFileName = "connection.json";
         private const string _folder = "vitawave";
-        private const string _congfigGlob = "*.cfg"; //anything w/ .cfg will work as a config
+        private const string _TISettingsGlob = "*.cfg";
 
-        private static string _filePath;
+        private static string _configSettingsPath;
+        private static string _connectionPath;
 
         static SettingsManager()
         {
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-            {
-                var winPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), _folder);
-                if (!Directory.Exists(winPath))
-                    Directory.CreateDirectory(winPath);
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _folder);
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
 
-                _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), _folder);
-            }
-            else
+            _configSettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _folder, _configFileName);
+            _connectionPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _folder, _connectionFileName);
+
+            if (!File.Exists(_configSettingsPath))
             {
-                // TODO linux. Somewhere simple
-                _filePath = "";
-                //Path.Combine("/home", username, "Documents");
+                SaveSettings(Config.Default, _configSettingsPath);
+            }
+
+            if (!File.Exists(_connectionPath))
+            {
+                SaveSettings(APIConnection.Default, _connectionPath);
             }
         }
 
-        public static Config? GetSettings()
+        public static Config? GetConfigSettings()
         {
-            Config? settings = null;
-
-
-            if (!File.Exists(Path.Combine(_filePath, _settingsFileName)))
-            {
-                settings = Config.Default;
-                SaveSettings(settings);
-                return settings;
-            }
-
             try
             {
-                var json = File.ReadAllText(Path.Combine(_filePath, _settingsFileName));
-                settings = JsonSerializer.Deserialize<Config>(json) ?? throw new Exception();
+                var json = File.ReadAllText(_configSettingsPath);
+                return JsonSerializer.Deserialize<Config>(json) ?? throw new Exception();
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Error getting runtime settings");
             }
 
-            return settings;
+            return null;
         }
 
-        public static void SaveSettings(Config settings)
+        public static APIConnection GetNetworkSettings()
+        {
+            try
+            {
+                var json = File.ReadAllText(_connectionPath);
+                return JsonSerializer.Deserialize<APIConnection>(json) ?? throw new Exception();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error getting connection");
+                SaveSettings(APIConnection.Default, _connectionPath);
+                return APIConnection.Default;
+            }
+        }
+
+        public static void SaveSettings(object settings, string path)
         {
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(Path.Combine(_filePath, _settingsFileName), json);
+            File.WriteAllText(path, json);
         }
 
-        public static string GetModuleConfigPath()
+        public static string GetTIConfigPath()
         {
-            return Directory.GetFiles(Path.Combine(_filePath), _congfigGlob).First();
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _folder);
+            return Directory.GetFiles(Path.Combine(path, _TISettingsGlob)).First();
         }
     }
 }
