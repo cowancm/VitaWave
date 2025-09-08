@@ -13,19 +13,13 @@ public class ConsoleController
 
     private readonly IModuleIO _moduleIO;
     private readonly ISignalRClient _signalRClient;
-
-#if DEBUG
     private readonly FakeDataPusher _fakeDataPusher;
-#endif
 
     public ConsoleController(IModuleIO moduleIO, ISignalRClient client)
     {
         _moduleIO = moduleIO;
         _signalRClient = client;
-
-#if DEBUG
         _fakeDataPusher = new(client);
-#endif
     }
 
     public void Start()
