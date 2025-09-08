@@ -24,6 +24,13 @@ namespace VitaWave.ModuleControl.Settings
 
             if (!File.Exists(_configSettingsPath))
             {
+                var defaultConfig = Config.Default;
+                if (!OperatingSystem.IsWindows())
+                {
+                    defaultConfig.DataPortName = "/dev/ttyUSB0";
+                    defaultConfig.CliPortName = "/dev/ttyUSB1"; //maybe needs to be flipped?
+                }
+                
                 SaveSettings(Config.Default, _configSettingsPath);
             }
 
