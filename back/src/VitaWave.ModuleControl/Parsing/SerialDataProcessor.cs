@@ -138,13 +138,17 @@ namespace VitaWave.ModuleControl.Parsing
                 }
                 if (_old != null)
                 {
+
+#if DEBUG
+                    ConsoleHelpers.PrintTargetIndication(newEvent);
+#endif
+
                     if (_client.Status == HubConnectionState.Connected)
                     {
                         _ = _client.SendDataAsync(new EventPacket(_old.Points ?? new(),
                                                                 _old.Targets ?? new(),
                                                                 _old.Heights ?? new(),
                                                                 _old.PresenceIndication));
-                        ConsoleHelpers.PrintTargetIndication(newEvent);
                     }
                 }
                 _old = newEvent;

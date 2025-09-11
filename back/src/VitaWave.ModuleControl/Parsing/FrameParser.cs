@@ -210,12 +210,11 @@ namespace VitaWave.ModuleControl.Parsing
 
         private static TargetHeight CreateTargetHeight(Span<byte> data)
         {
-
             var targetHeight = new TargetHeight()
             {
-                TargetID = MemoryMarshal.Read<uint>(data.Slice(0, 4)),
-                MaxZ = MemoryMarshal.Read<float>(data.Slice(4, 4)),
-                MinZ = MemoryMarshal.Read<float>(data.Slice(8, 4))
+                TargetID = data[0],   // 1 byte
+                MaxZ = MemoryMarshal.Read<float>(data.Slice(1, 4)),
+                MinZ = MemoryMarshal.Read<float>(data.Slice(5, 4)),
             };
 
             return targetHeight;
