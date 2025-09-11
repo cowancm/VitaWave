@@ -79,7 +79,7 @@ namespace VitaWave.ModuleControl.Settings
         public static string GetTIConfigPath()
         {
             var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _folder);
-            return Directory.GetFiles(Path.Combine(path, _TISettingsGlob)).First();
+            return Directory.GetFiles(path, _TISettingsGlob).First();
         }
     }
 }
