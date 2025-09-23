@@ -28,7 +28,7 @@ namespace VitaWave.ModuleControl.Settings
                     DataBaud = 921600,
                     CliBaud = 115200,
                     Identifier = Guid.NewGuid().ToString("N").Substring(0, 10),
-                    API_Server_IP = "192.168.10.2",
+                    API_Server_IP = "192.168.10.1",
                     Port = 5000
                 };
             } 
