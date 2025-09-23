@@ -5,22 +5,18 @@ namespace VitaWave.ModuleControl.Settings
 {
     internal static class SettingsManager
     {
+        private const string _folder = "/vitawave";
         private const string _configFileName = "settings.json";
-        private const string _connectionFileName = "connection.json";
-        private const string _folder = "vitawave";
         private const string _TISettingsGlob = "*.cfg";
 
         private static string _configSettingsPath;
-        private static string _connectionPath;
 
         static SettingsManager()
         {
-            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _folder);
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
+            if (!Directory.Exists(_folder))
+                Directory.CreateDirectory(_folder);
 
-            _configSettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _folder, _configFileName);
-            _connectionPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _folder, _connectionFileName);
+            _configSettingsPath = Path.Combine(_folder, _configFileName);
 
             if (!File.Exists(_configSettingsPath))
             {
@@ -32,11 +28,6 @@ namespace VitaWave.ModuleControl.Settings
                 }
                 
                 SaveSettings(Config.Default, _configSettingsPath);
-            }
-
-            if (!File.Exists(_connectionPath))
-            {
-                SaveSettings(APIConnection.Default, _connectionPath);
             }
         }
 
@@ -55,21 +46,6 @@ namespace VitaWave.ModuleControl.Settings
             return null;
         }
 
-        public static APIConnection GetNetworkSettings()
-        {
-            try
-            {
-                var json = File.ReadAllText(_connectionPath);
-                return JsonSerializer.Deserialize<APIConnection>(json) ?? throw new Exception();
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error getting connection");
-                SaveSettings(APIConnection.Default, _connectionPath);
-                return APIConnection.Default;
-            }
-        }
-
         public static void SaveSettings(object settings, string path)
         {
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
@@ -78,8 +54,7 @@ namespace VitaWave.ModuleControl.Settings
 
         public static string GetTIConfigPath()
         {
-            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), _folder);
-            return Directory.GetFiles(path, _TISettingsGlob).First();
+            return Directory.GetFiles(_folder, _TISettingsGlob).First();
         }
     }
 }

@@ -15,6 +15,8 @@ namespace VitaWave.ModuleControl.Settings
         public required int DataBaud { get; set; }
         public required int CliBaud { get; set; }
         public required string Identifier { get; set; }
+        public required string API_Server_IP { get; set; }
+        public required int Port { get; set; }
 
         public static Config Default 
         { 
@@ -25,7 +27,9 @@ namespace VitaWave.ModuleControl.Settings
                     CliPortName = string.Empty,
                     DataBaud = 921600,
                     CliBaud = 115200,
-                    Identifier = Guid.NewGuid().ToString("N").Substring(0, 10)
+                    Identifier = Guid.NewGuid().ToString("N").Substring(0, 10),
+                    API_Server_IP = "192.168.10.2",
+                    Port = 5000
                 };
             } 
         }
