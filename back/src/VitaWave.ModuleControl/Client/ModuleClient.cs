@@ -17,12 +17,12 @@ namespace VitaWave.ModuleControl.Client
         public ModuleClient()
         {
 
+            Log.Information("Trying to connect to {}", SettingsManager.GetNetworkSettings().API_Url);
+
             _connection = new HubConnectionBuilder()
                 .WithUrl(SettingsManager.GetNetworkSettings().API_Url)
                 .WithAutomaticReconnect(new ReconnectPolicy()) //reconnects every 2 seconds
                 .Build();
-
-            Log.Debug("Trying to connect to {}", SettingsManager.GetNetworkSettings().API_Url);
 
             _connection.Reconnecting += (error) =>
             {
