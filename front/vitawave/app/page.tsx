@@ -20,7 +20,7 @@ export default function Home() {
     <main
       className="min-h-screen bg-black bg-cover bg-center bg-no-repeat p-12 flex flex-col items-center relative"
       style={{
-        backgroundImage: "url('https://f2.toyhou.se/file/f2-toyhou-se/images/100018560_HeP3kfdjJAx5JRU.png')",
+        backgroundImage: "url('https://media.istockphoto.com/id/2210341882/vector/empty-plain-blank-dark-gray-black-coloured-splattered-grunge-textured-horizontal-rustic.jpg?s=612x612&w=0&k=20&c=rc3MVo9x6vEUBMCMLIyhqBp0UmQM377DUbI-TFW-NS0=)",
       }}
     >
       {/* Tabs */}
@@ -64,26 +64,12 @@ export default function Home() {
                 Save as .xlsx
               </button>
               <button className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                Save as .pdf
+                Save as .csv
               </button>
             </div>
           </>
         )}
       </div>
-
-      {/* Pagedoll using standard <img> */}
-      <a
-        href="https://www.youtube.com/watch?v=yzgS61zgPEg"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-4 right-4 z-50"
-      >
-        <img
-          src="https://f2.toyhou.se/file/f2-toyhou-se/images/99927551_mWP5pszNT02gzlV.png"
-          alt="Pagedoll"
-          className="w-24 h-auto hover:scale-105 transition-transform duration-300"
-        />
-      </a>
     </main>
   );
 }
