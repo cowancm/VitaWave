@@ -5,7 +5,11 @@ namespace VitaWave.ModuleControl.Settings
 {
     internal static class SettingsManager
     {
-        private const string _folder = "~/vitawave";
+        private static readonly string _folder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            "vitawave"
+        );
+
         private const string _configFileName = "settings.json";
         private const string _TISettingsGlob = "*.cfg";
 
@@ -24,10 +28,10 @@ namespace VitaWave.ModuleControl.Settings
                 if (!OperatingSystem.IsWindows())
                 {
                     defaultConfig.DataPortName = "/dev/ttyUSB0";
-                    defaultConfig.CliPortName = "/dev/ttyUSB1"; //maybe needs to be flipped?
+                    defaultConfig.CliPortName = "/dev/ttyUSB1"; // maybe needs to be flipped?
                 }
-                
-                SaveSettings(Config.Default, _configSettingsPath);
+
+                SaveSettings(defaultConfig, _configSettingsPath);
             }
         }
 
