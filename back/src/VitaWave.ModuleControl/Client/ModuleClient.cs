@@ -16,11 +16,10 @@ namespace VitaWave.ModuleControl.Client
 
         public ModuleClient()
         {
-
-            Log.Information("Trying to connect to {}", SettingsManager.GetNetworkSettings().API_Url);
-
+            var config = SettingsManager.GetConfigSettings();
+            Log.Information("http://" + config.API_Server_IP + ":" + config.Port.ToString() + "module");
             _connection = new HubConnectionBuilder()
-                .WithUrl(SettingsManager.GetNetworkSettings().API_Url)
+                .WithUrl("http://" + config.API_Server_IP + ":" + config.Port.ToString() + "module") 
                 .WithAutomaticReconnect(new ReconnectPolicy()) //reconnects every 2 seconds
                 .Build();
 

@@ -5,7 +5,7 @@ namespace VitaWave.ModuleControl.Settings
 {
     internal static class SettingsManager
     {
-        private const string _folder = "/vitawave";
+        private const string _folder = "~/vitawave";
         private const string _configFileName = "settings.json";
         private const string _TISettingsGlob = "*.cfg";
 
@@ -31,7 +31,7 @@ namespace VitaWave.ModuleControl.Settings
             }
         }
 
-        public static Config? GetConfigSettings()
+        public static Config GetConfigSettings()
         {
             try
             {
@@ -41,9 +41,8 @@ namespace VitaWave.ModuleControl.Settings
             catch (Exception ex)
             {
                 Log.Error(ex, "Error getting runtime settings");
+                return Config.Default;
             }
-
-            return null;
         }
 
         public static void SaveSettings(object settings, string path)
