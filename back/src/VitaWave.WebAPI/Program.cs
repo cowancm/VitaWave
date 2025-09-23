@@ -1,5 +1,6 @@
 using Serilog;
 using VitaWave.WebAPI;
+using VitaWave.WebAPI.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,11 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5000); // expose on LAN, port 5000
+});
+
 builder.Services.AddSignalR();
 var app = builder.Build();
 
@@ -42,5 +48,7 @@ app.UseCors();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<ModuleHub>("/module");
 
 app.Run();

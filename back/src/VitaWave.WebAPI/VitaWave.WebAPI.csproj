@@ -17,8 +17,4 @@
     <ProjectReference Include="..\VitaWave.Common\VitaWave.Common.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Hubs\" />
-  </ItemGroup>
-
 </Project>

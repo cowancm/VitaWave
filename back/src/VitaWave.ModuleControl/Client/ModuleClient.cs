@@ -12,15 +12,17 @@ namespace VitaWave.ModuleControl.Client
         private HubConnection _connection;
         private IModuleIO? _IO;
 
-        const string serverURL = "http://localhost:5278/module"; //this is going in a settings file at some point.
         const int MaxInitialConnectAttempts = int.MaxValue;
 
         public ModuleClient()
         {
+
             _connection = new HubConnectionBuilder()
                 .WithUrl(SettingsManager.GetNetworkSettings().API_Url)
                 .WithAutomaticReconnect(new ReconnectPolicy()) //reconnects every 2 seconds
                 .Build();
+
+            Log.Debug("Trying to connect to {}", SettingsManager.GetNetworkSettings().API_Url);
 
             _connection.Reconnecting += (error) =>
             {
@@ -67,19 +69,19 @@ namespace VitaWave.ModuleControl.Client
             }
         }
 
-        const string SendModuleDataName = "ModuleData";
+        public const string SendModuleDataName = "ModuleData";
         public async Task SendDataAsync(object data)
         {
             await _connection.SendAsync(SendModuleDataName, data);
         }
 
-        const string SendModuleStatusName = "ModuleStatus";
+        public const string SendModuleStatusName = "ModuleStatus";
         private async Task SendModuleStatusAsync()
         {
             await _connection.SendAsync(SendModuleStatusName, _IO?.Status.ToString() ?? "Unknown");
         }
 
-        const string SendIdentifierMethodName = "ModuleRegistration";
+        public const string SendIdentifierMethodName = "ModuleRegistration";
         private async Task SendIdentifier()
         {
             await _connection.SendAsync(SendIdentifierMethodName, SettingsManager.GetConfigSettings()?.Identifier ?? "Unknown");
