@@ -11,12 +11,8 @@ namespace VitaWave.Data
     public class DataProcessor
     {
         public event EventHandler<PhysicalEvent> EventRaise = delegate { };
-        public DataProcessor(DataFacilitator dataFacilitator) 
-        {
-            dataFacilitator.DataReceived += DataFacilitator_DataReceived;
-        }
 
-        private void DataFacilitator_DataReceived(object? sender, List<Common.EventPacket> events)
+        public void NewData(List<Common.EventPacket> events)
         {
             // this is for ashton and Mati to figure out
             // events is a list of event packets. ctrl + click event packet to see what you can do with it

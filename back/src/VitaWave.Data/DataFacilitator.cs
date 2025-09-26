@@ -6,42 +6,37 @@ namespace VitaWave.Data
     public class DataFacilitator
     {
         public readonly Dictionary<string, ConcurrentQueue<EventPacket>> _instances = new();
+        public readonly DataProcessor _dataProcessor;
         const int MAX_EVENT_WINDOW = 10; // store the last 100 module events for alg
 
-        public event EventHandler<List<EventPacket>> DataReceived = delegate { };
-
-        public DataFacilitator() { }
+        public DataFacilitator(DataProcessor dataProcessor) 
+        {
+            _dataProcessor = dataProcessor;
+        }
 
         public void Add(EventPacket packet)
         {
             try
             {
                 var moduleID = packet.ModuleID;
-                if (_instances.TryGetValue(moduleID, out var dataList))
+                if (_instances.TryGetValue(moduleID, out var dataQueue))
                 {
-                    dataList.Enqueue(packet);
-                    if (dataList.Count > MAX_EVENT_WINDOW)
+                    dataQueue.Enqueue(packet);
+                    if (dataQueue.Count > MAX_EVENT_WINDOW)
                     {
-                        dataList.TryDequeue(out var _);
+                        dataQueue.TryDequeue(out var _);
                     }
 
-                    if (dataList.Count == MAX_EVENT_WINDOW)
+                    if (dataQueue.Count == MAX_EVENT_WINDOW)
                     {
-                        var handlers = DataReceived?.GetInvocationList();
-                        if (handlers != null)
-                        {
-                            foreach (EventHandler<List<EventPacket>> handler in handlers)
-                            {
-                                Task.Run(() => handler(this, dataList.ToList())); //make a copy, sends to dataProcessor
-                            }
-                        }
+                        _dataProcessor.NewData(dataQueue.ToList()); // copy to a list instead of pass by ref
                     }
                 }
                 else
                 {
-                    dataList = new ConcurrentQueue<EventPacket>();
-                    _instances.Add(moduleID, dataList);
-                    dataList.Append(packet);
+                    dataQueue = new ConcurrentQueue<EventPacket>();
+                    _instances.Add(moduleID, dataQueue);
+                    dataQueue.Append(packet);
                 }
             }
             catch (Exception ex)

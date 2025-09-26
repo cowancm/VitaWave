@@ -35,8 +35,8 @@ builder.WebHost.ConfigureKestrel(options =>
 
 builder.Services.AddSignalR();
 
-builder.Services.AddSingleton<DataFacilitator>();
 builder.Services.AddSingleton<DataProcessor>();
+builder.Services.AddSingleton<DataFacilitator>();
 
 var app = builder.Build();
 
