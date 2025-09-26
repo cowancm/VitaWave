@@ -16,12 +16,22 @@ namespace VitaWave.ModuleControl.Client
 
         public ModuleClient()
         {
-            var config = SettingsManager.GetConfigSettings();
-            Log.Information("http://" + config.API_Server_IP + ":" + config.Port.ToString() + "/module");
-            _connection = new HubConnectionBuilder()
-                .WithUrl("http://" + config.API_Server_IP + ":" + config.Port.ToString() + "/module") 
-                .WithAutomaticReconnect(new ReconnectPolicy()) //reconnects every 2 seconds
-                .Build();
+            if (!OperatingSystem.IsWindows())
+            {
+                var config = SettingsManager.GetConfigSettings();
+                Log.Information("http://" + config.API_Server_IP + ":" + config.Port.ToString() + "/module");
+                _connection = new HubConnectionBuilder()
+                    .WithUrl("http://" + config.API_Server_IP + ":" + config.Port.ToString() + "/module")
+                    .WithAutomaticReconnect(new ReconnectPolicy()) //reconnects every 2 seconds
+                    .Build();
+            }
+            else
+            {
+                _connection = new HubConnectionBuilder()
+                    .WithUrl("http://127.0.0.1:5000" + "/module")
+                    .WithAutomaticReconnect(new ReconnectPolicy()) //reconnects every 2 seconds
+                    .Build();
+            }
 
             _connection.Reconnecting += (error) =>
             {
@@ -53,7 +63,6 @@ namespace VitaWave.ModuleControl.Client
                     attempt++;
                     await _connection.StartAsync();
                     Log.Information("Server connection started");
-                    await SendIdentifier();
                 }
                 catch (Exception ex)
                 {
@@ -78,12 +87,6 @@ namespace VitaWave.ModuleControl.Client
         private async Task SendModuleStatusAsync()
         {
             await _connection.SendAsync(SendModuleStatusName, _IO?.Status.ToString() ?? "Unknown");
-        }
-
-        public const string SendIdentifierMethodName = "ModuleRegistration";
-        private async Task SendIdentifier()
-        {
-            await _connection.SendAsync(SendIdentifierMethodName, SettingsManager.GetConfigSettings()?.Identifier ?? "Unknown");
         }
 
         public void SubscribeToModuleStatus(IModuleIO io)

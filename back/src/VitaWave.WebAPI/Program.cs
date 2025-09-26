@@ -1,4 +1,5 @@
 using Serilog;
+using VitaWave.Data;
 using VitaWave.WebAPI;
 using VitaWave.WebAPI.Hubs;
 
@@ -33,6 +34,10 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 builder.Services.AddSignalR();
+
+builder.Services.AddSingleton<DataFacilitator>();
+builder.Services.AddSingleton<DataProcessor>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -4,6 +4,7 @@ using VitaWave.Common;
 using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing.TLVs;
+using VitaWave.ModuleControl.Settings;
 
 namespace VitaWave.ModuleControl.Parsing
 {
@@ -19,11 +20,14 @@ namespace VitaWave.ModuleControl.Parsing
         private SemaphoreSlim _signal = new SemaphoreSlim(0);
         private CancellationTokenSource? _cts = null;
 
+        private string _moduleID = "";
+
         private readonly ISignalRClient _client;
 
         public SerialDataProcessor(ISignalRClient client)
         {
             _client = client;
+            _moduleID = SettingsManager.GetConfigSettings().Identifier;
         }
 
         public void AddToQueue(byte[] buffer, FrameHeader header)
@@ -111,7 +115,8 @@ namespace VitaWave.ModuleControl.Parsing
                     _ = _client.SendDataAsync(new EventPacket(e.Points ?? new(),
                                                               e.Targets ?? new(),
                                                               e.Heights ?? new(),
-                                                              e.PresenceIndication));
+                                                              e.PresenceIndication,
+                                                              _moduleID));
 #if DEBUG
                 ConsoleHelpers.PrintTargetIndication(e);
 #endif

@@ -8,13 +8,16 @@ namespace VitaWave.Common
         public List<Target> Targets { get; set; } = new();
         public List<TargetHeight> TargetHeights { get; set; } = new();
         public bool Presence { get; set; } = false;
+        public string ModuleID = "";
+        public 
 
-        public EventPacket(List<ParsedPoint> points, List<Target> targets, List<TargetHeight> heights, bool presence) 
+        public EventPacket(List<ParsedPoint> points, List<Target> targets, List<TargetHeight> heights, bool presence, string moduleID = "") 
         {
             Points = points;
             Targets = targets;
             TargetHeights = heights;
             Presence = presence;
+            ModuleID = moduleID;
         }
 
         public EventPacket() { }
