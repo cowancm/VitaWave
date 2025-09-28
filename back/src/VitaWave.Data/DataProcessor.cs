@@ -10,7 +10,7 @@ namespace VitaWave.Data
 {
     public class DataProcessor
     {
-        public event EventHandler<PhysicalEvent> EventRaise = delegate { };
+        public event EventHandler<ResultEvent>? EventRaise;
 
         public void NewData(List<Common.EventPacket> events)
         {
@@ -27,14 +27,14 @@ namespace VitaWave.Data
 
             // I would recommend making another class for the algs, this method calls those, gets the result, and calls the notify fn below with result
             // just make sure the moduleID goes with it ie:
-            var resultOfAlg = PhysicalEvent.Standing;
+            var resultOfAlg = ResultEvent.Standing;
             resultOfAlg.ModuleID = events.First().ModuleID;
             Notify(resultOfAlg);
         }
 
-        public void Notify(PhysicalEvent e)
+        public void Notify(ResultEvent e)
         {
-            if (EventRaise.GetInvocationList() != null)
+            if (EventRaise?.GetInvocationList() != null)
                 EventRaise.Invoke(this, e);
         }
     }

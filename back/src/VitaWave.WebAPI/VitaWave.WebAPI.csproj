@@ -11,15 +11,12 @@
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="System.Text.Json" Version="9.0.4" />
+    <PackageReference Include="Twilio" Version="7.13.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\VitaWave.Common\VitaWave.Common.csproj" />
 	<ProjectReference Include="..\VitaWave.Data\VitaWave.Data.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Notifications\" />
   </ItemGroup>
 
 </Project>
