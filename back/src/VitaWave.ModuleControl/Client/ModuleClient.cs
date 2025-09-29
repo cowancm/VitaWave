@@ -39,16 +39,11 @@ namespace VitaWave.ModuleControl.Client
                 return Task.CompletedTask;
             };
 
-            _connection.Reconnected += (connectionId) =>
+            _connection.Reconnected += async (connectionId) =>
             {
                 Log.Information("Server reconnected with connectionId: {ConnectionId}", connectionId);
-                return Task.CompletedTask;
+                await SendModuleIdentifier();
             };
-
-            _connection.On("ModuleStatusRequest", async() =>
-            {
-                await SendModuleStatusAsync();
-            });
         }
 
 
@@ -62,6 +57,7 @@ namespace VitaWave.ModuleControl.Client
                 {
                     attempt++;
                     await _connection.StartAsync();
+                    await SendModuleIdentifier();
                     Log.Information("Server connection started");
                 }
                 catch (Exception ex)
@@ -83,10 +79,10 @@ namespace VitaWave.ModuleControl.Client
             await _connection.SendAsync(SendModuleDataName, data);
         }
 
-        public const string SendModuleStatusName = "ModuleStatus";
-        private async Task SendModuleStatusAsync()
+        public const string SendModuleStatusName = "ModuleIdentifier";
+        public async Task SendModuleIdentifier()
         {
-            await _connection.SendAsync(SendModuleStatusName, _IO?.Status.ToString() ?? "Unknown");
+            await _connection.SendAsync(SendModuleStatusName, SettingsManager.GetConfigSettings().Identifier ?? "Unknown");
         }
 
         public void SubscribeToModuleStatus(IModuleIO io)
@@ -100,7 +96,7 @@ namespace VitaWave.ModuleControl.Client
             {
                 if (args.PropertyName == nameof(io.Status))
                 {
-                    await SendModuleStatusAsync();
+                    //await SendModuleStatusAsync();
                 }
             };
         }

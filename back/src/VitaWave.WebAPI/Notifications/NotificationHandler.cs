@@ -57,7 +57,7 @@ namespace VitaWave.WebAPI.Notifications
             if (string.IsNullOrWhiteSpace(creds.AccountSid) || string.IsNullOrWhiteSpace(creds.AuthToken) || string.IsNullOrWhiteSpace(creds.SenderPhoneNumber))
             {
                 Log.Error("Twilio credentials are missing or invalid. Please check the JSON file.");
-                //Environment.Exit(1);
+                Environment.Exit(1);
             }
 
             TwilioClient.Init(creds.AccountSid, creds.AuthToken);
