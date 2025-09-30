@@ -8,8 +8,9 @@ namespace VitaWave.Data
         public readonly Dictionary<string, ConcurrentQueue<EventPacket>> _instances = new();
         public readonly DataProcessor _dataProcessor;
         const int MAX_EVENT_WINDOW = 10; // store the last 100 module events for alg
+        private bool dataSave = true;
 
-        public DataFacilitator(DataProcessor dataProcessor) 
+        public DataFacilitator(DataProcessor dataProcessor)
         {
             _dataProcessor = dataProcessor;
         }
@@ -29,7 +30,14 @@ namespace VitaWave.Data
 
                     if (dataQueue.Count == MAX_EVENT_WINDOW)
                     {
-                        _dataProcessor.NewData(dataQueue.ToList()); // copy to a list instead of pass by ref
+                        var events = dataQueue.ToList();
+
+                        if (dataSave)
+                        {
+                            Task.Run(() => SaveDataHelper.Save(events));
+                        }
+
+                        _dataProcessor.NewData(events); // copy to a list instead of pass by ref
                     }
                 }
                 else

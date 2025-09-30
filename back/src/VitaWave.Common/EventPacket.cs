@@ -9,13 +9,15 @@ namespace VitaWave.Common
         public List<TargetHeight> TargetHeights { get; set; } = new();
         public bool Presence { get; set; } = false;
         public string ModuleID = "";
+        public long TimeSinceLastMs = 0;
 
-        public EventPacket(List<ParsedPoint> points, List<Target> targets, List<TargetHeight> heights, bool presence, string moduleID = "") 
+        public EventPacket(List<ParsedPoint> points, List<Target> targets, List<TargetHeight> heights, bool presence, long deltaTime, string moduleID = "")
         {
             Points = points;
             Targets = targets;
             TargetHeights = heights;
             Presence = presence;
+            TimeSinceLastMs = deltaTime;
             ModuleID = moduleID;
         }
 
