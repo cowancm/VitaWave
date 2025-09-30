@@ -15,7 +15,7 @@ namespace VitaWave.WebAPI.Hubs
 
         public async Task ModuleData(EventPacket dataPacket)
         {
-            dataFacilitator.Add(dataPacket);
+            await Task.Run(() => dataFacilitator.Add(dataPacket));
         }
 
         public async Task ModuleIdentifier(string identifier)
