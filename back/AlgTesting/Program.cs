@@ -1,8 +1,6 @@
 ﻿using Serilog;
-using VitaWave.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using AlgTesting;
 
 namespace ModuleControl
 {
@@ -21,9 +19,7 @@ namespace ModuleControl
                 await Host.CreateDefaultBuilder(args)
                     .ConfigureServices((context, services) =>
                     {
-                        services.AddSingleton<DataProcessor>();
-                        services.AddSingleton<DataFacilitator>();
-                        services.AddSingleton<Tester>();
+                        services.AddSingleton<
                     })
                     .RunConsoleAsync();
             }

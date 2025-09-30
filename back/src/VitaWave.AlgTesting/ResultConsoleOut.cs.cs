@@ -7,9 +7,9 @@ using VitaWave.Data;
 
 namespace AlgTesting
 {
-    public class ResultConsoleOut
+    public class Tester
     {
-        public ResultConsoleOut(DataProcessor dataProcessor) 
+        public Tester(DataProcessor dataProcessor) 
         {
             dataProcessor.EventRaise += OnNewEvent;
         }
