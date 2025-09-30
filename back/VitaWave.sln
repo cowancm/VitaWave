@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.Common", "src\Vita
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.Data", "src\VitaWave.Data\VitaWave.Data.csproj", "{93D1126D-C532-44DF-95A5-CED68EA9CAED}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgTesting", "src\VitaWave.AlgTesting\AlgTesting.csproj", "{3983C315-2432-47FE-AB4C-30858085F735}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{93D1126D-C532-44DF-95A5-CED68EA9CAED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93D1126D-C532-44DF-95A5-CED68EA9CAED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93D1126D-C532-44DF-95A5-CED68EA9CAED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3983C315-2432-47FE-AB4C-30858085F735}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3983C315-2432-47FE-AB4C-30858085F735}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3983C315-2432-47FE-AB4C-30858085F735}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3983C315-2432-47FE-AB4C-30858085F735}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
