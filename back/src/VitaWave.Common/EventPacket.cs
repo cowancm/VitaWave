@@ -8,8 +8,8 @@ namespace VitaWave.Common
         public List<Target> Targets { get; set; } = new();
         public List<TargetHeight> TargetHeights { get; set; } = new();
         public bool Presence { get; set; } = false;
-        public string ModuleID = "";
-        public long TimeSinceLastMs = 0;
+        public string ModuleID { get; set; } = "";
+        public long TimeSinceLastMs { get; set; } = 0;
 
         public EventPacket(List<ParsedPoint> points, List<Target> targets, List<TargetHeight> heights, bool presence, long deltaTime, string moduleID = "")
         {

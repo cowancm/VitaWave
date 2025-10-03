@@ -130,7 +130,6 @@ namespace VitaWave.ModuleControl.Parsing
         long _olderMs;  // timestamp of packet before _old
         long _lastMs;   // timestamp of _old
         readonly Stopwatch sw = Stopwatch.StartNew();
-
         private void CreateNewSendLast(byte[] tlvBuffer, FrameHeader frameHeader)
         {
             try

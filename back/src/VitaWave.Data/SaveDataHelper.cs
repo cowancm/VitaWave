@@ -1,3 +1,4 @@
+using Serilog;
 using System.Data;
 using VitaWave.Common;
 using VitaWave.Common.TLVs;
@@ -25,8 +26,18 @@ namespace VitaWave.Data
             var timenow = DateTime.Now.ToString("yyyyMMddTHHmmss");
             var pathWithFileName = Path.Combine(dumpFolderPath, timenow + ".json");
             var contents = System.Text.Json.JsonSerializer.Serialize(packets);
-            File.Create(pathWithFileName);
             File.WriteAllText(pathWithFileName, contents);
+            LogTime(packets);
+        }
+
+        public static void LogTime(List<EventPacket> packets)
+        {
+            long time = 0;
+            foreach(var packet in packets)
+            {
+                time += packet.TimeSinceLastMs;
+            }
+            Log.Information(time.ToString());
         }
     }
 }

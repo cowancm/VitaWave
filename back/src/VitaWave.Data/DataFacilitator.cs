@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Reflection.Metadata.Ecma335;
 using VitaWave.Common;
 
 namespace VitaWave.Data
@@ -7,7 +8,7 @@ namespace VitaWave.Data
     {
         public readonly Dictionary<string, ConcurrentQueue<EventPacket>> _instances = new();
         public readonly DataProcessor _dataProcessor;
-        const int MAX_EVENT_WINDOW = 10; // store the last 100 module events for alg
+        const int MAX_EVENT_WINDOW = 100; // store the last 100 module events for alg
         private bool dataSave = true;
 
         public DataFacilitator(DataProcessor dataProcessor)
@@ -34,7 +35,7 @@ namespace VitaWave.Data
 
                         if (dataSave)
                         {
-                            Task.Run(() => SaveDataHelper.Save(events));
+                            SaveDataHelper.Save(events);
                         }
 
                         _dataProcessor.NewData(events); // copy to a list instead of pass by ref
