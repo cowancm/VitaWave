@@ -17,7 +17,7 @@ namespace VitaWave.WebAPI.Notifications
         const string FILE_NAME = "twilio_settings.json";
         TwilioCredentials _creds = new();
 
-        public NotificationHandler(DataProcessor dataProcessor)
+        public NotificationHandler(DataFacilitator dataProcessor)
         {
             dataProcessor.EventRaise += DataProcessor_EventRaise;
 
