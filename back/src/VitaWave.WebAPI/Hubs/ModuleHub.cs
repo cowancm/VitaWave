@@ -7,7 +7,6 @@ namespace VitaWave.WebAPI.Hubs
     public class ModuleHub : Hub
     {
         public readonly DataFacilitator dataFacilitator;
-        public event EventHandler<object> Disconnected;
         public ModuleHub(DataFacilitator dataFacilitator)
         {
             this.dataFacilitator = dataFacilitator;

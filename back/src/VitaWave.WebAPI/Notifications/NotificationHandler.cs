@@ -1,8 +1,6 @@
 ﻿using Serilog;
 using System.Text.Json;
-using Twilio;
-using Twilio.Rest.Api.V2010.Account;
-using Twilio.Types;
+using VitaWave.Common;
 using VitaWave.Data;
 
 namespace VitaWave.WebAPI.Notifications
@@ -14,8 +12,11 @@ namespace VitaWave.WebAPI.Notifications
             "vitawave"
         );
 
-        const string FILE_NAME = "twilio_settings.json";
-        TwilioCredentials _creds = new();
+        const string FILE_NAME = "text_settings.json";
+        const int MAX_NUMBER_SENDS = 3;
+
+        static int current_num_sends = 0;
+        private TextSettings settings;
 
         public NotificationHandler(DataFacilitator dataProcessor)
         {
@@ -29,80 +30,65 @@ namespace VitaWave.WebAPI.Notifications
             var filePath = Path.Combine(_folder, FILE_NAME);
             if (!File.Exists(filePath))
             {
-                // Create example JSON file
-                var example = new
-                {
-                    ServiceOn = false,
-                    AccountSid = "YOUR_ACCOUNT_SID",
-                    AuthToken = "YOUR_AUTH_TOKEN",
-                    SenderPhoneNumber = "123456789"
-                };
-
-                File.WriteAllText(filePath, JsonSerializer.Serialize(example, new JsonSerializerOptions { WriteIndented = true }));
-
-                Log.Information($"Empty auth JSON file created at: {filePath}\n" +
-                                "Fill in your AccountSid and AuthToken, enable service then restart the application.\n" +
-                                "Leave service off and messages will just be logged in the console window.");
+                settings = new TextSettings();
+                var json = JsonSerializer.Serialize(settings);
+                File.WriteAllText(filePath, json);
+                Log.Information($"Default file for text messaging saved at {filePath}. Add name, phone, and key. The service bool must be set to true as well. Service can be off.");
             }
-
-            // Read JSON
-            var jsonText = File.ReadAllText(filePath);
-            var creds = JsonSerializer.Deserialize<TwilioCredentials>(jsonText);
-
-            if(creds == null || !creds.ServiceOn)
+            else
             {
-                return;
+                settings = JsonSerializer.Deserialize<TextSettings>(File.ReadAllText(filePath)) ?? new TextSettings();
             }
-
-            if (string.IsNullOrWhiteSpace(creds.AccountSid) || string.IsNullOrWhiteSpace(creds.AuthToken) || string.IsNullOrWhiteSpace(creds.SenderPhoneNumber))
-            {
-                Log.Error("Twilio credentials are missing or invalid. Please check the JSON file.");
-                Environment.Exit(1);
-            }
-
-            TwilioClient.Init(creds.AccountSid, creds.AuthToken);
-            _creds = creds;
-
         }
 
         private void DataProcessor_EventRaise(object? sender, Common.ResultEvent e)
         {
             Log.Debug("Notification event raised!");
 
-            if (e.Severity > 4)
+            if (settings.ServiceOn && e.Severity > 4 &&
+                !string.IsNullOrEmpty(settings.ApiKey) &&
+                Interlocked.Increment(ref current_num_sends) <= MAX_NUMBER_SENDS)
             {
-                var message = new Message()
-                {
-                    Event = e
-                };
-                SendMessage(new Recipient(), message);
+                SendMessage(e);
             }
         }
 
-        private void SendMessage(Recipient rcpt, Message msg)
+        private async void SendMessage(ResultEvent e)
         {
-            var messageBody = $"Hello {rcpt.FirstName} {rcpt.LastName}. The following severe event took place \"{msg.Event}\" at ${msg.Event.DateTimeString}.";
-
-            Log.Debug("SendMessage() Call: \n" + messageBody);
-
-            if (!_creds.ServiceOn)
-            {
+            if (!settings.ServiceOn || current_num_sends > MAX_NUMBER_SENDS)
                 return;
-            }
 
-            var message = MessageResource.Create(
-                body: messageBody,
-                from: new PhoneNumber(_creds.SenderPhoneNumber),
-                to: new PhoneNumber(rcpt.PhoneNumber)
-            );
+            Log.Debug("Sending Critical Text Message");
+
+            var message = $"FROM VITAWAVE: Hello {settings.Name}, we believe a severe event has taken place. Please check on your person(s).";
+
+            try
+            {
+                using var http = new HttpClient();
+                var values = new Dictionary<string, string>
+                {
+                    ["phone"] = settings.Phone,
+                    ["message"] = message,
+                    ["key"] = settings.ApiKey
+                };
+                var content = new FormUrlEncodedContent(values);
+                var response = await http.PostAsync("https://textbelt.com/text", content);
+                var result = await response.Content.ReadAsStringAsync();
+                Log.Information($"Textbelt response: {result}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error trying to send text message.");
+            }
         }
     }
 
-    public class TwilioCredentials
+
+    public class TextSettings
     {
         public bool ServiceOn = false;
-        public string AccountSid { get; set; } = "";
-        public string AuthToken { get; set; } = "";
-        public string SenderPhoneNumber { get; set; } = "";
+        public string ApiKey = "";
+        public string Name = "Ashton Esquivel";
+        public string Phone = "10digitphonenumber";
     }
 }

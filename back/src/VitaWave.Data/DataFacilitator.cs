@@ -77,10 +77,10 @@ namespace VitaWave.Data
 
         public void Notify(ResultEvent e)
         {
-            Log.Information("Event: " + e.Event + "   " + "TID: " + e.TID);
+            Log.Debug("Event: " + e.Event + "   " + "TID: " + e.TID);
 
-            //if (EventRaise?.GetInvocationList() != null)
-            //    EventRaise.Invoke(this, e);
+            if (EventRaise != null)
+                EventRaise.Invoke(this, e);
         }
 
 
