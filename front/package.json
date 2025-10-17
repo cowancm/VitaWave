@@ -1,20 +1,16 @@
 {
-  "name": "front",
+  "name": "scatter-chart-electron",
   "version": "1.0.0",
-  "description": "",
+  "description": "VitaWave",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron ."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "electron": "^38.2.2"
-  },
   "dependencies": {
-    "vis-data": "^8.0.3",
-    "vis-graph3d": "^7.0.2"
+    "@microsoft/signalr": "^8.0.0",
+    "electron": "^28.0.0"
   }
 }

@@ -1,24 +1,30 @@
-import { app, BrowserWindow } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
 
 function createWindow() {
-  const win = new BrowserWindow({
-    width: 1000,
+  const mainWindow = new BrowserWindow({
+    width: 1200,
     height: 800,
-    minWidth: 600,    // optional minimum width
-    minHeight: 400,   // optional minimum height
-    resizable: true,  // allow resizing
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     }
   });
 
-  win.loadFile(path.join(__dirname, 'index.html'));
+  mainWindow.loadFile('index.html');
+  
+  // Open DevTools for debugging (optional)
+  mainWindow.webContents.openDevTools();
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on('activate', function () {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', function () {
+  if (process.platform !== 'darwin') app.quit();
+});
