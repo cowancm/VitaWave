@@ -35,7 +35,6 @@ builder.WebHost.ConfigureKestrel(options =>
 
 builder.Services.AddSignalR();
 
-builder.Services.AddSingleton<DataProcessor>();
 builder.Services.AddSingleton<DataFacilitator>();
 builder.Services.AddSingleton<NotificationHandler>();
 

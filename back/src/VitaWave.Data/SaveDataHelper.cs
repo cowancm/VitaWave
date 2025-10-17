@@ -27,7 +27,7 @@ namespace VitaWave.Data
             var pathWithFileName = Path.Combine(dumpFolderPath, timenow + ".json");
             var contents = System.Text.Json.JsonSerializer.Serialize(packets);
             File.WriteAllText(pathWithFileName, contents);
-            LogTime(packets);
+            // LogTime(packets);
         }
 
         public static void LogTime(List<EventPacket> packets)

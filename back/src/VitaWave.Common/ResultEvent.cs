@@ -11,6 +11,7 @@ namespace VitaWave.Common
         public int Severity = 1;
         public string Event = "";
         public string ModuleID = "";
+        public int TID = 255;
         public DateTime DateTime = DateTime.Now;
 
         public string DateTimeString => DateTime.ToString(); 
@@ -27,6 +28,18 @@ namespace VitaWave.Common
             Event = "Sitting"
         };
 
+        public static ResultEvent Laying => new ResultEvent()
+        {
+            Severity = 1,
+            Event = "Laying"
+        };
+
+        public static ResultEvent Unknown => new ResultEvent()
+        {
+            Severity = 1,
+            Event = "Unknown"
+        };
+
         public static ResultEvent Active => new ResultEvent()
         {
             Severity = 1,
@@ -37,21 +50,6 @@ namespace VitaWave.Common
         {
             Severity = 5,
             Event = "Fall"
-        };
-
-
-        // no detection in a long time
-        public static ResultEvent Dormant => new ResultEvent()
-        {
-            Severity = 2,
-            Event = "Dormant"
-        };
-
-        // Person is in the same place for a long time
-        public static ResultEvent InPlace => new ResultEvent()
-        {
-            Severity = 5,
-            Event = "In Place"
         };
     }
 }
