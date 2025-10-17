@@ -57,5 +57,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapHub<ModuleHub>("/module");
+app.MapHub<ChartHub>("/chart");
 
 app.Run();

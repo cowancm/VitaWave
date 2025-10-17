@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using Serilog;
 using VitaWave.Common;
 using VitaWave.Data;
 
@@ -6,20 +7,26 @@ namespace VitaWave.WebAPI.Hubs
 {
     public class ModuleHub : Hub
     {
-        public readonly DataFacilitator dataFacilitator;
-        public ModuleHub(DataFacilitator dataFacilitator)
+        public readonly DataFacilitator _dataFacilitator;
+        public readonly IHubContext<ChartHub> _chartHub;
+        public event EventHandler<object> Disconnected;
+
+        public ModuleHub(DataFacilitator dataFacilitator, IHubContext<ChartHub> chartHub)
         {
-            this.dataFacilitator = dataFacilitator;
+            _dataFacilitator = dataFacilitator;
+            _chartHub = chartHub;
         }
 
         public async Task ModuleData(EventPacket dataPacket)
         {
-            dataFacilitator.Add(dataPacket);
+            _dataFacilitator.Add(dataPacket);
+            await _chartHub.BroadcastUnfilteredPoints(dataPacket.ToPersonPointSet());
         }
 
         public async Task ModuleIdentifier(string identifier)
         {
             ModuleHubState.Add(Context.ConnectionId, identifier);
+            Log.Information($"Connected to module: {identifier}");
         }
 
         public override Task OnDisconnectedAsync(Exception? exception)
@@ -28,7 +35,7 @@ namespace VitaWave.WebAPI.Hubs
 
             if (moduleID != null)
             {
-                dataFacilitator.Clear(moduleID); //should clear alg buffer
+                _dataFacilitator.Clear(moduleID); //should clear alg buffer
             }
 
             return base.OnDisconnectedAsync(exception);
