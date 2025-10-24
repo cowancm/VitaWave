@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,48 +9,61 @@ namespace VitaWave.Common
 {
     public class ResultEvent
     {
-        public int Severity = 1;
-        public string Event = "";
-        public string ModuleID = "";
-        public int TID = 255;
-        public DateTime DateTime = DateTime.Now;
+        public string ModuleID { get; set; } = "";
+        public int TID { get; set; }
 
-        public string DateTimeString => DateTime.ToString(); 
+        private ResultID _resultId = ResultID.Unknown;
 
-        public static ResultEvent Standing => new ResultEvent()
+        public ResultID ResultId
         {
-            Severity = 1,
-            Event = "Standing"
-        };
+            get => _resultId;
+            set
+            {
+                _resultId = value;
 
-        public static ResultEvent Sitting => new ResultEvent()
-        {
-            Severity = 1,
-            Event = "Sitting"
-        };
+                if (value == ResultID.Fall || value == ResultID.Inactive2Hr || value == ResultID.NonDetection10Hr)
+                    IsWorthNotifing = true;
+                else
+                    IsWorthNotifing = false;
+            }
+        }
 
-        public static ResultEvent Laying => new ResultEvent()
-        {
-            Severity = 1,
-            Event = "Laying"
-        };
+        public bool IsWorthNotifing { get; set; } = false;
 
-        public static ResultEvent Unknown => new ResultEvent()
+        public ResultType GetTypeResult(ResultID enumId)
         {
-            Severity = 1,
-            Event = "Unknown"
-        };
+            var id = (int)enumId;
+            if (id >= 30)
+                return ResultType.Fall;
+            else if (id >= 20)
+                return ResultType.Meta;
+            else if (id >= 10)
+                return ResultType.Dynamic;
+            else if (id >= 1)
+                return ResultType.Static;
+            else
+                return ResultType.Unknown;
+        }
+    }
 
-        public static ResultEvent Active => new ResultEvent()
-        {
-            Severity = 1,
-            Event = "Active"
-        };
+    public enum ResultType
+    {
+        Unknown,
+        Static,
+        Dynamic,
+        Meta,
+        Fall
+    }
 
-        public static ResultEvent Fall => new ResultEvent()
-        {
-            Severity = 5,
-            Event = "Fall"
-        };
+    public enum ResultID
+    {
+        Unknown = 0,
+        Standing = 1,
+        Sitting = 2,
+        Laying = 3,
+        Active = 10,
+        NonDetection10Hr = 20, // No detection for an extended period of time
+        Inactive2Hr = 21, // Detected, but position more or less same for an extended period of time
+        Fall = 30,
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace VitaWave.Common.TLVs
 {
-    public record ParsedPoint
+    public record PointCloudPoint
     {
         public required double X { get; init; }
         public required double Y { get; init; }

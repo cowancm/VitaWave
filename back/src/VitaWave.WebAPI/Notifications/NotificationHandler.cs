@@ -43,9 +43,12 @@ namespace VitaWave.WebAPI.Notifications
 
         private void DataProcessor_EventRaise(object? sender, Common.ResultEvent e)
         {
+            if(!e.IsWorthNotifing)
+                return;
+
             Log.Debug("Notification event raised!");
 
-            if (settings.ServiceOn && e.Severity > 4 &&
+            if (settings.ServiceOn &&
                 !string.IsNullOrEmpty(settings.ApiKey) &&
                 Interlocked.Increment(ref current_num_sends) <= MAX_NUMBER_SENDS)
             {

@@ -10,7 +10,7 @@ Log.Logger = new LoggerConfiguration()
                     .WriteTo.Console()
                     .CreateLogger();
 
-// Add services to the container.
+// AddEvent services to the container.
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
