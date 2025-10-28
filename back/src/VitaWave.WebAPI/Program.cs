@@ -2,7 +2,6 @@
 using VitaWave.Data;
 using VitaWave.WebAPI.Hubs;
 using VitaWave.WebAPI.Notifications;
-using VitaWave.WebAPI.Tcp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,9 +38,6 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<DataFacilitator>();
 builder.Services.AddSingleton<NotificationHandler>();
 
-#if DEBUG
-    builder.Services.AddSingleton<TcpCommandServer>();
-#endif
 
 var app = builder.Build();
 
