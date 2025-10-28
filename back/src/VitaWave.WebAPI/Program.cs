@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using Microsoft.AspNetCore.SignalR;
+using Serilog;
 using VitaWave.Data;
 using VitaWave.WebAPI.Hubs;
 using VitaWave.WebAPI.Notifications;
@@ -59,5 +60,11 @@ app.MapControllers();
 
 app.MapHub<ModuleHub>("/module");
 app.MapHub<ChartHub>("/chart");
+
+#if DEBUG
+app.MapHub<DevHub>("/dev");
+var devHub = app.Services.GetRequiredService<IHubContext<DevHub>>();
+
+#endif
 
 app.Run();

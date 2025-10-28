@@ -231,6 +231,15 @@
             width: 100px;
         }
 
+        .input-group select {
+            padding: 0.5rem;
+            border: 1px solid #4b5563;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            min-width: 200px;
+        }
+
         .add-point-button {
             padding: 0.5rem 1.5rem;
             border: none;
@@ -302,7 +311,189 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
+        }
+
+        /* Playback specific styles */
+        .playback-container {
+            width: 100%;
+        }
+
+        .playback-controls {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .playback-charts {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .playback-chart {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+
+        .playback-chart h4 {
+            color: white;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .playback-chart canvas {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+        }
+
+        .timeline-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .timeline-info {
+            display: flex;
+            justify-content: space-between;
+            color: #d1d5db;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .timeline-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            margin-bottom: 1rem;
+        }
+
+        .timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+        }
+
+        .timeline-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            border: none;
+        }
+
+        .playback-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .playback-button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #2563eb;
+            color: white;
+        }
+
+        .playback-button:hover {
+            background: #1d4ed8;
+        }
+
+        .playback-button:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+        }
+
+        .playback-button.playing {
+            background: #dc2626;
+        }
+
+        .playback-button.playing:hover {
+            background: #b91c1c;
+        }
+
+        .record-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .color-legend {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .color-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #d1d5db;
+            font-size: 0.875rem;
+        }
+
+        .color-box {
+            width: 30px;
+            height: 20px;
+            border-radius: 0.25rem;
+            border: 1px solid #4b5563;
+        }
+
+        /* Notification Toast */
+        .notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+            max-width: 400px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification-toast.error {
+            background: #dc2626;
+        }
+
+        .notification-toast.success {
+            background: #10b981;
+        }
+
+        .notification-toast.info {
+            background: #2563eb;
         }
     </style>
 </head>
@@ -325,6 +516,7 @@
     <div class="tabs">
         <button class="tab-button active" data-tab="graph">Graph</button>
         <button class="tab-button" data-tab="data">Data</button>
+        <button class="tab-button" data-tab="playback">Playback</button>
     </div>
 
     <!-- Content -->
@@ -376,15 +568,113 @@
                 <button class="export-button csv">Save as .csv</button>
             </div>
         </div>
+
+        <!-- Playback Tab -->
+        <div id="playbackTab" class="hidden">
+            <div class="playback-container">
+                <!-- Record Panel -->
+                <div class="record-panel">
+                    <h3>Record Playback</h3>
+                    <div class="test-inputs">
+                        <div class="input-group">
+                            <label for="recordName">File Name</label>
+                            <input type="text" id="recordName" placeholder="my-recording" />
+                        </div>
+                        <div class="input-group">
+                            <label for="recordFrames">Frames to Record</label>
+                            <input type="number" id="recordFrames" value="100" min="1" />
+                        </div>
+                        <button class="add-point-button" id="startRecordButton">Start Recording</button>
+                    </div>
+                </div>
+
+                <!-- File Selection -->
+                <div class="playback-controls">
+                    <h3>Playback File</h3>
+                    <div class="test-inputs">
+                        <div class="input-group">
+                            <label for="playbackFileSelect">Select File</label>
+                            <select id="playbackFileSelect">
+                                <option value="">-- No file selected --</option>
+                            </select>
+                        </div>
+                        <button class="add-point-button" id="refreshFilesButton">Refresh Files</button>
+                        <button class="add-point-button" id="loadFileButton">Load File</button>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="timeline-container">
+                    <div class="timeline-info">
+                        <span>Frame: <span id="currentFrame">0</span> / <span id="totalFrames">0</span></span>
+                        <span>Time: <span id="currentTime">0.00</span>s</span>
+                    </div>
+                    <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="0" value="0" step="1" disabled />
+                    <div class="playback-buttons">
+                        <button class="playback-button" id="playButton" disabled>Play</button>
+                        <button class="playback-button" id="stopButton" disabled>Stop</button>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="playback-charts">
+                    <div class="playback-chart">
+                        <h4>XY View</h4>
+                        <canvas id="playbackCanvasXY" width="500" height="400"></canvas>
+                    </div>
+                    <div class="playback-chart">
+                        <h4>XZ View</h4>
+                        <canvas id="playbackCanvasXZ" width="500" height="400"></canvas>
+                    </div>
+                </div>
+
+                <!-- Color Legend -->
+                <div class="color-legend">
+                    <span style="color: #d1d5db; font-weight: 600;">Doppler Velocity:</span>
+                    <div class="color-legend-item">
+                        <div class="color-box" style="background: white;"></div>
+                        <span>0 m/s (No Movement)</span>
+                    </div>
+                    <div class="color-legend-item">
+                        <div class="color-box" style="background: #8B0000;"></div>
+                        <span>5 m/s (Fast Movement)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="node_modules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        // Notification system (shared across all scripts)
+        function showNotification(message, type = 'info') {
+            // Remove any existing notifications
+            const existing = document.querySelector('.notification-toast');
+            if (existing) {
+                existing.remove();
+            }
+
+            // Create new notification
+            const notification = document.createElement('div');
+            notification.className = `notification-toast ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // Auto-remove after 4 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+    </script>
     <script src="chart.js"></script>
+    <script src="playback.js"></script>
     <script>
         // Tab switching logic
         const tabButtons = document.querySelectorAll('.tab-button');
         const graphTab = document.getElementById('graphTab');
         const dataTab = document.getElementById('dataTab');
+        const playbackTab = document.getElementById('playbackTab');
         const lastUpdatedEl = document.getElementById('lastUpdated');
 
         tabButtons.forEach(button => {
@@ -396,13 +686,17 @@
                 button.classList.add('active');
 
                 // Show/hide tabs
+                graphTab.classList.add('hidden');
+                dataTab.classList.add('hidden');
+                playbackTab.classList.add('hidden');
+
                 if (tab === 'graph') {
                     graphTab.classList.remove('hidden');
-                    dataTab.classList.add('hidden');
                     lastUpdatedEl.textContent = new Date().toLocaleString();
-                } else {
-                    graphTab.classList.add('hidden');
+                } else if (tab === 'data') {
                     dataTab.classList.remove('hidden');
+                } else if (tab === 'playback') {
+                    playbackTab.classList.remove('hidden');
                 }
             });
         });

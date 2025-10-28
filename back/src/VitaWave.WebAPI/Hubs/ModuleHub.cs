@@ -2,6 +2,7 @@
 using Serilog;
 using VitaWave.Common;
 using VitaWave.Data;
+using VitaWave.WebAPI.Playback;
 
 namespace VitaWave.WebAPI.Hubs
 {
@@ -19,8 +20,12 @@ namespace VitaWave.WebAPI.Hubs
 
         public async Task ModuleData(EventPacket dataPacket)
         {
-            _dataFacilitator.Add(dataPacket);
-            await _chartHub.BroadcastUnfilteredPoints(dataPacket.ToPersonPointSet());
+#if DEBUG
+            PlaybackHelper.AddEvent(dataPacket);
+#endif
+
+            //_dataFacilitator.Add(dataPacket);
+            //await _chartHub.BroadcastUnfilteredPoints(dataPacket.ToPersonPointSet());
         }
 
         public async Task ModuleIdentifier(string identifier)

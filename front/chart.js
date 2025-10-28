@@ -208,7 +208,7 @@ async function connectToSignalR() {
     const url = signalrUrlInput.value.trim();
     
     if (!url) {
-        alert('Please enter a SignalR Hub URL');
+        showNotification('Please enter a SignalR Hub URL', 'error');
         return;
     }
     
@@ -231,10 +231,11 @@ async function connectToSignalR() {
         await connection.start();
         console.log('Connected to SignalR');
         updateConnectionStatus(true);
+        showNotification('Connected to SignalR', 'success');
         
     } catch (err) {
         console.error('SignalR Connection Error:', err);
-        alert(`Connection failed: ${err.message}`);
+        showNotification(`Connection failed: ${err.message}`, 'error');
         updateConnectionStatus(false);
     } finally {
         connectButton.disabled = false;
@@ -249,6 +250,7 @@ async function disconnectFromSignalR() {
             await connection.stop();
             console.log('Disconnected from SignalR');
             connection = null;
+            showNotification('Disconnected from SignalR', 'info');
         } catch (err) {
             console.error('Error disconnecting:', err);
         }
@@ -264,17 +266,17 @@ function addTestPoint() {
     const status = testStatusInput.value.trim() || 'test';
     
     if (isNaN(x) || isNaN(y) || isNaN(tid)) {
-        alert('Please enter valid numbers for X, Y, and TID');
+        showNotification('Please enter valid numbers for X, Y, and TID', 'error');
         return;
     }
     
     if (x < chartConfig.xMin || x > chartConfig.xMax) {
-        alert(`X must be between ${chartConfig.xMin} and ${chartConfig.xMax}`);
+        showNotification(`X must be between ${chartConfig.xMin} and ${chartConfig.xMax}`, 'error');
         return;
     }
     
     if (y < chartConfig.yMin || y > chartConfig.yMax) {
-        alert(`Y must be between ${chartConfig.yMin} and ${chartConfig.yMax}`);
+        showNotification(`Y must be between ${chartConfig.yMin} and ${chartConfig.yMax}`, 'error');
         return;
     }
     
@@ -284,15 +286,15 @@ function addTestPoint() {
     console.log('Added test point:', newPoint);
     render();
     document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    showNotification('Point added successfully', 'success');
 }
 
 // Clear all points
 function clearAllPoints() {
-    if (confirm('Are you sure you want to clear all points?')) {
-        points = [];
-        render();
-        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
-    }
+    points = [];
+    render();
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    showNotification('All points cleared', 'info');
 }
 
 // Event listeners

@@ -23,7 +23,27 @@ namespace VitaWave.Common
         [JsonPropertyName("points")]
         public List<PointCloudPoint> points { get; set; } = new();
 
-        [JsonPropertyName("timeOffset")]
-        public float timeOffset { get; set; } //how long from the first frame in the set (the first frame should be 0!) in seconds!
     }
+
+    // From other file.
+    //public record PointCloudPoint
+    //{
+    //    [JsonPropertyName("x")]
+    //    public required double X { get; init; }
+
+    //    [JsonPropertyName("y")]
+    //    public required double Y { get; init; }
+
+    //    [JsonPropertyName("z")]
+    //    public double Z { get; init; }
+
+    //    [JsonPropertyName("tid")]
+    //    public uint TID { get; set; }
+
+    //    [JsonPropertyName("doppler")]
+    //    public double Doppler { get; init; }
+
+    //    [JsonPropertyName("snr")]
+    //    public double SNR { get; init; }
+    //}
 }
