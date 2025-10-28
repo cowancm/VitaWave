@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using VitaWave.ModuleControl.Parsing.TLVs;
-using VitaWave.Common.ModuleToAPI.TLVs;
 using static VitaWave.ModuleControl.Parsing.TLVs.TLV_Constants;
+using VitaWave.Common.TLVs;
 
 namespace VitaWave.ModuleControl.Parsing
 {
@@ -81,10 +81,10 @@ namespace VitaWave.ModuleControl.Parsing
         private const int LENGTH_PER_POINT_CLOUD = 8;
         private const int LENGTH_PER_POINT_UNITS = 20;
 
-        private static List<ParsedPoint> CreatePointCloud(Span<byte> data)
+        private static List<PointCloudPoint> CreatePointCloud(Span<byte> data)
         {
             var numPoints = (data.Length - LENGTH_PER_POINT_UNITS) / LENGTH_PER_POINT_CLOUD; //first couple bytes are the point unit, then the rest are points
-            var points = new List<ParsedPoint>();
+            var points = new List<PointCloudPoint>();
 
             var elevationUnit = MemoryMarshal.Read<float>(data.Slice(0, 4));
             var azmithUnit = MemoryMarshal.Read<float>(data.Slice(4, 4));
@@ -104,12 +104,12 @@ namespace VitaWave.ModuleControl.Parsing
             return points;
         }
 
-        private static ParsedPoint CreatePoint(Span<byte> data, float elevationUnit, float azimuthUnit, float dopplerUnit, float rangeUnit, float snrUnit)
+        private static PointCloudPoint CreatePoint(Span<byte> data, float elevationUnit, float azimuthUnit, float dopplerUnit, float rangeUnit, float snrUnit)
         {
             var elevation = elevationUnit * (double)(sbyte)data[0];
             var azimuth = azimuthUnit * (double)(sbyte)data[1];
             var range = rangeUnit * (double)MemoryMarshal.Read<Int16>(data.Slice(4, 2));
-            var point = new ParsedPoint()
+            var point = new PointCloudPoint()
             {
                 X = range * Math.Sin(azimuth) * Math.Cos(elevation),
                 Y = range * Math.Cos(azimuth) * Math.Cos(elevation),
@@ -210,12 +210,11 @@ namespace VitaWave.ModuleControl.Parsing
 
         private static TargetHeight CreateTargetHeight(Span<byte> data)
         {
-
             var targetHeight = new TargetHeight()
             {
-                TargetID = MemoryMarshal.Read<uint>(data.Slice(0, 4)),
-                MaxZ = MemoryMarshal.Read<float>(data.Slice(4, 4)),
-                MinZ = MemoryMarshal.Read<float>(data.Slice(8, 4))
+                TargetID = data[0],   // 1 byte
+                MaxZ = MemoryMarshal.Read<float>(data.Slice(1, 4)),
+                MinZ = MemoryMarshal.Read<float>(data.Slice(5, 4)),
             };
 
             return targetHeight;

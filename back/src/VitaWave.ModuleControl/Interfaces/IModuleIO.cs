@@ -12,8 +12,7 @@ namespace VitaWave.ModuleControl.Interfaces
         State Pause();
         State Stop();
 
-        Task<bool> TryWriteConfigFromFile();
-        Task<bool> TryWriteConfigFromFile(string[] configStrings);
+        public Task<bool> TryWriteConfigToModule();
     }
 
     public enum State

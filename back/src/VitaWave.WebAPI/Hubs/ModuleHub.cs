@@ -1,25 +1,44 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using VitaWave.Common.ModuleToAPI;
+using Serilog;
+using VitaWave.Common;
+using VitaWave.Data;
 
 namespace VitaWave.WebAPI.Hubs
 {
     public class ModuleHub : Hub
     {
-        private readonly DataFacilitator _dataFacilitator;
+        public readonly DataFacilitator _dataFacilitator;
+        public readonly IHubContext<ChartHub> _chartHub;
+        public event EventHandler<object> Disconnected;
 
-        public ModuleHub(DataFacilitator dataFacilitator) 
+        public ModuleHub(DataFacilitator dataFacilitator, IHubContext<ChartHub> chartHub)
         {
             _dataFacilitator = dataFacilitator;
+            _chartHub = chartHub;
         }
 
-        public async Task OnRecieveModuleData(EventPacket dataPacket)
+        public async Task ModuleData(EventPacket dataPacket)
         {
-            await _dataFacilitator.OnNewData(dataPacket);
+            _dataFacilitator.Add(dataPacket);
+            await _chartHub.BroadcastUnfilteredPoints(dataPacket.ToPersonPointSet());
         }
 
-        public async Task OnReceiveModuleStatus(string status)
+        public async Task ModuleIdentifier(string identifier)
         {
-            //TODO
+            ModuleHubState.Add(Context.ConnectionId, identifier);
+            Log.Information($"Connected to module: {identifier}");
+        }
+
+        public override Task OnDisconnectedAsync(Exception? exception)
+        {
+            var moduleID = ModuleHubState.Remove(Context.ConnectionId);
+
+            if (moduleID != null)
+            {
+                _dataFacilitator.Clear(moduleID); //should clear alg buffer
+            }
+
+            return base.OnDisconnectedAsync(exception);
         }
     }
 }

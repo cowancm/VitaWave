@@ -15,13 +15,6 @@
     <PackageReference Include="System.IO.Ports" Version="9.0.3" />
   </ItemGroup>
 	
-	<!--copy any settings-->
-	<ItemGroup>
-		<None Include="..\..\DevSettings\*.cfg;..\..\DevSettings\runtimesettings.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<Link>%(Filename)%(Extension)</Link>
-		</None>
-	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\VitaWave.Common\VitaWave.Common.csproj" />
 	</ItemGroup>

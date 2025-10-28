@@ -1,8 +1,11 @@
-﻿using Serilog;
-using VitaWave.Common.ModuleToAPI;
+﻿using Microsoft.AspNetCore.SignalR.Client;
+using Serilog;
+using System.Diagnostics;
+using VitaWave.Common;
 using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing.TLVs;
+using VitaWave.ModuleControl.Settings;
 
 namespace VitaWave.ModuleControl.Parsing
 {
@@ -10,7 +13,7 @@ namespace VitaWave.ModuleControl.Parsing
     {
         public bool IsRunning => _worker != null || _worker != Task.CompletedTask;
 
-        private (byte[] Buffer, FrameHeader Header)[] _frameBuffer = new (byte[], FrameHeader)[50];
+        private (byte[] Buffer, FrameHeader Header)[] _frameBuffer = new (byte[], FrameHeader)[100];
         private int _writeIndex = 0;
         private int _readIndex = 0;
         private bool _bufferFull = false;
@@ -18,11 +21,14 @@ namespace VitaWave.ModuleControl.Parsing
         private SemaphoreSlim _signal = new SemaphoreSlim(0);
         private CancellationTokenSource? _cts = null;
 
+        private string _moduleID = "";
+
         private readonly ISignalRClient _client;
 
         public SerialDataProcessor(ISignalRClient client)
         {
             _client = client;
+            _moduleID = SettingsManager.GetConfigSettings().Identifier;
         }
 
         public void AddToQueue(byte[] buffer, FrameHeader header)
@@ -100,28 +106,44 @@ namespace VitaWave.ModuleControl.Parsing
             }
         }
 
+//        private async void CreateNewSendLast(byte[] tlvBuffer, FrameHeader header)
+//        {
+//            var e = FrameParser.CreateEvent(tlvBuffer, header);
+//            if (e != null) 
+//            {
+
+//                if (_client.Status == HubConnectionState.Connected)
+//                    _ = _client.SendDataAsync(new EventPacket(e.Points ?? new(),
+//                                                              e.Targets ?? new(),
+//                                                              e.Heights ?? new(),
+//                                                              e.PresenceIndication,
+//                                                              _moduleID));
+//#if DEBUG
+//                ConsoleHelpers.PrintTargetIndication(e);
+//#endif
+//            }
+//        }
+
 
 
         ParsingEvent? _old;
-        /// <summary>
-        /// Target indices come from frame n+1 for frame n, therefore, we wait for the next frame so we can get this data, and 
-        /// apply them to the old object before we ship the old object out. So every frame is sent on the next call of this fn.
-        /// If there are failures, we apply null where need be so we don't confuse later data aggregation. Basically, if it's bad
-        /// data, we nuke this one and the last
-        /// </summary>
-        /// <param name="tlvBuffer"></param>
-        /// <param name="frameHeader"></param>
-        private async void CreateNewSendLast(byte[] tlvBuffer, FrameHeader frameHeader)
+        long _olderMs;  // timestamp of packet before _old
+        long _lastMs;   // timestamp of _old
+        readonly Stopwatch sw = Stopwatch.StartNew();
+        private void CreateNewSendLast(byte[] tlvBuffer, FrameHeader frameHeader)
         {
             try
             {
                 var newEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
+                var nowMs = sw.ElapsedMilliseconds;
+
                 if (newEvent == null)
                 {
                     _old = null;
                     Log.Error("Resultant frame is null");
                     return;
                 }
+
                 if (newEvent.TargetIndices != null)
                 {
                     if (_old?.Points?.Count != newEvent.TargetIndices.Count)
@@ -130,21 +152,37 @@ namespace VitaWave.ModuleControl.Parsing
                         Log.Error("Frame target indices doesn't match expected number of points");
                         return;
                     }
+
                     for (int i = 0; i < newEvent.TargetIndices.Count; i++)
                     {
                         _old!.Points![i].TID = newEvent.TargetIndices[i];
                     }
                 }
+
                 if (_old != null)
                 {
-                    //TODO, move this somewhere else
-                    await _client.SendDataAsync(new EventPacket(_old.Points ?? new(),
-                                                                _old.Targets ?? new(),
-                                                                _old.Heights ?? new(),
-                                                                _old.PresenceIndication));
+        #if DEBUG
                     ConsoleHelpers.PrintTargetIndication(newEvent);
+        #endif
+                    if (_client.Status == HubConnectionState.Connected)
+                    {
+                        // Delta = time between _old and the one before it
+                        var delta = _lastMs - _olderMs;
+
+                        _ = _client.SendDataAsync(new EventPacket(
+                            _old.Points ?? new(),
+                            _old.Targets ?? new(),
+                            _old.Heights ?? new(),
+                            _old.PresenceIndication,
+                            delta
+                        ));
+                    }
                 }
-                _old = newEvent;
+
+                // Shift timestamps forward
+                _olderMs = _lastMs; 
+                _lastMs = nowMs;    
+                _old = newEvent;    // prepare for next send
             }
             catch (Exception e)
             {
