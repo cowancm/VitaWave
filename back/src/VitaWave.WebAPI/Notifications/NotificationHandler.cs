@@ -2,6 +2,7 @@
 using System.Text.Json;
 using VitaWave.Common;
 using VitaWave.Data;
+using VitaWave.WebAPI.Settings;
 
 namespace VitaWave.WebAPI.Notifications
 {
@@ -12,33 +13,15 @@ namespace VitaWave.WebAPI.Notifications
             "vitawave"
         );
 
-        const string FILE_NAME = "text_settings.json";
         const int MAX_NUMBER_SENDS = 3;
-
         static int current_num_sends = 0;
+
         private TextSettings settings;
 
         public NotificationHandler(DataFacilitator dataProcessor)
         {
             dataProcessor.EventRaise += DataProcessor_EventRaise;
-
-            if (!Directory.Exists(_folder))
-            {
-                Directory.CreateDirectory(_folder);
-            }
-
-            var filePath = Path.Combine(_folder, FILE_NAME);
-            if (!File.Exists(filePath))
-            {
-                settings = new TextSettings();
-                var json = JsonSerializer.Serialize(settings);
-                File.WriteAllText(filePath, json);
-                Log.Information($"Default file for text messaging saved at {filePath}. Add name, phone, and key. The service bool must be set to true as well. Service can be off.");
-            }
-            else
-            {
-                settings = JsonSerializer.Deserialize<TextSettings>(File.ReadAllText(filePath)) ?? new TextSettings();
-            }
+            settings = SettingsManager.GetSettings().TextSettings;
         }
 
         private void DataProcessor_EventRaise(object? sender, Common.ResultEvent e)
@@ -84,14 +67,5 @@ namespace VitaWave.WebAPI.Notifications
                 Log.Error(ex, "Error trying to send text message.");
             }
         }
-    }
-
-
-    public class TextSettings
-    {
-        public bool ServiceOn = false;
-        public string ApiKey = "";
-        public string Name = "Ashton Esquivel";
-        public string Phone = "10digitphonenumber";
     }
 }
