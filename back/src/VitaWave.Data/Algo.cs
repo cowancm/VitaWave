@@ -73,24 +73,24 @@ namespace VitaWave.Data
         {
             double height = CurrentPosition.Z;      // now calibrated height above floor
 
-            if (VerticalChange < -FALLING_Z_DROP && Velocity > FALLING_VELOCITY)
-            {
-                return ResultEvent.Fall;
-            }
+            //if (VerticalChange < -FALLING_Z_DROP && Velocity > FALLING_VELOCITY)
+            //{
+            //    return ;
+            //}
 
-            if (Velocity > WALKING_VELOCITY)
-                return ResultEvent.Active;
+            //if (Velocity > WALKING_VELOCITY)
+            //    return ResultEvent.Active;
 
-            if (height > STANDING_Z)
-                return ResultEvent.Standing;
+            //if (height > STANDING_Z)
+            //    return ResultEvent.Standing;
 
-            if (height > SITTING_Z_MIN && height <= STANDING_Z)
-                return ResultEvent.Sitting;
+            //if (height > SITTING_Z_MIN && height <= STANDING_Z)
+            //    return ResultEvent.Sitting;
 
-            if (height <= LAYING_Z)
-                return ResultEvent.Laying;
+            //if (height <= LAYING_Z)
+            //    return ResultEvent.Laying;
 
-            return ResultEvent.Unknown;
+            return new ResultEvent();
         }
     }
 }

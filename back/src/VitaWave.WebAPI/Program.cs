@@ -1,7 +1,8 @@
-using Serilog;
+﻿using Serilog;
 using VitaWave.Data;
 using VitaWave.WebAPI.Hubs;
 using VitaWave.WebAPI.Notifications;
+using VitaWave.WebAPI.Tcp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +11,7 @@ Log.Logger = new LoggerConfiguration()
                     .WriteTo.Console()
                     .CreateLogger();
 
-// Add services to the container.
+// AddEvent services to the container.
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -37,6 +38,10 @@ builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<DataFacilitator>();
 builder.Services.AddSingleton<NotificationHandler>();
+
+#if DEBUG
+    builder.Services.AddSingleton<TcpCommandServer>();
+#endif
 
 var app = builder.Build();
 

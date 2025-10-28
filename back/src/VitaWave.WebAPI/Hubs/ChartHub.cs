@@ -19,5 +19,10 @@ namespace VitaWave.WebAPI.Hubs
         {
             await hub.Clients.All.SendAsync("OnFilteredPoints", points);
         }
+
+        public static async Task SendOutPlaybackPoints(this IHubContext<ChartHub> hub, PlaybackFile file)
+        {
+            await hub.Clients.All.SendAsync("OnPlaybackPoints", file);
+        }
     }
 }

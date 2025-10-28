@@ -1,95 +1,101 @@
 ﻿using Serilog;
 using System.Collections.Concurrent;
-using System.Numerics;
-using System.Reflection.Metadata.Ecma335;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using VitaWave.Common;
+using VitaWave.Data.Algs;
 
 namespace VitaWave.Data
 {
     public class DataFacilitator
     {
-        public readonly Dictionary<string, ConcurrentQueue<EventPacket>> _instances = new();
-        const int MAX_EVENT_WINDOW = 100; // store the last 100 module events for alg
-        private bool dataSave = true;
         public event EventHandler<ResultEvent>? EventRaise;
+        private ConcurrentDictionary<AlgKey, AlgSet> algs = new();
 
-        public void Add(EventPacket packet)
+        public void Add(EventPacket e)
         {
-            try
+            var filteredPersons = e.Filter();
+            if (filteredPersons == null || filteredPersons.Count == 0)
+                return;
+
+            foreach (var person in filteredPersons)
             {
-                var moduleID = packet.ModuleID;
-                if (_instances.TryGetValue(moduleID, out var dataQueue))
+                var key = new AlgKey
                 {
-                    dataQueue.Enqueue(packet);
-                    if (dataQueue.Count > MAX_EVENT_WINDOW)
-                    {
-                        dataQueue.TryDequeue(out var _);
-                    }
+                    ModuleID = e.ModuleID,
+                    TID = person.TID,
+                };
 
-                    if (dataQueue.Count == MAX_EVENT_WINDOW)
-                    {
-                        var events = dataQueue.ToList();
+                AlgSet? algSet;
 
-                        if (dataSave)
-                        {
-                            SaveDataHelper.Save(events);
-                        }
-
-                        OnNewData(events);
-                    }
+                if(!algs.TryGetValue(key, out algSet))
+                {
+                    algSet = new AlgSet();
+                    algs.TryAdd(key, algSet);
                 }
-                else
+
+                var result = ExecuteAlgs(algSet, person);
+
+                if (result.Item1 != null)
                 {
-                    dataQueue = new ConcurrentQueue<EventPacket>();
-                    _instances.Add(moduleID, dataQueue);
-                    dataQueue.Append(packet);
+                    Raise(result.Item1);
                 }
-            }
-            catch (Exception ex)
-            { }
-        }
 
-
-        private Dictionary<int, Person> trackedPersons = new(); // key = TID
-        public void OnNewData(List<Common.EventPacket> frames)
-        {
-            foreach (var frame in frames)
-            {
-                double deltaTime = frame.TimeSinceLastMs / 1000.0; // convert to seconds
-
-                if (frame.Targets == null || frame.Targets.Count == 0)
-                    continue;
-
-                foreach (var target in frame.Targets)
+                if (result.Item2 != null)
                 {
-                    if (!trackedPersons.ContainsKey((int)target.TID))
-                        trackedPersons[(int)target.TID] = new Person();
-
-                    var person = trackedPersons[(int)target.TID];
-                    Vector3 radarPos = new((float)target.X, (float)target.Y, (float)target.Z);
-                    person.UpdatePosition(radarPos, deltaTime);
-                    var posture = person.ClassifyPosture();
-                    posture.TID = (int)target.TID;
-                    Notify(posture);
+                    Raise(result.Item2);
                 }
             }
         }
 
-        public void Notify(ResultEvent e)
+        private static (ResultEvent?,ResultEvent?) ExecuteAlgs(AlgSet algs, FilteredPerson person)
         {
-            Log.Debug("Event: " + e.Event + "   " + "TID: " + e.TID);
+            ResultEvent? physicalResult = null;
+            ResultEvent? metaResult = null;
 
+            if      (algs.FallDetectAlg.AddAndExecute(person, out physicalResult)) { } // Fall detect reigns first
+            else if (algs.DynamicAlg.AddAndExecute(person, out physicalResult))    { } // Then Dynamic detection
+            else if (algs.StaticAlg.AddAndExecute(person, out physicalResult))     { } // Then Static detection
+
+            if (algs.MetaAlg.AddAndExecute(person, out metaResult)) { } // Finally, meta alg will be it's own (since it's based on a whole bunch of stuff
+
+            return (physicalResult, metaResult);
+        }
+
+        public void Raise(ResultEvent e)
+        {
             if (EventRaise != null)
                 EventRaise.Invoke(this, e);
         }
 
-
-        public void Clear(string key)
+        public void Clear(string moduleKey)
         {
             try
             {
-                _instances.Remove(key);
-            } catch (Exception ex) { } 
+                var keysToRemove = algs
+                    .Where(x => x.Key.ModuleID == moduleKey)
+                    .ToList();
+
+                foreach (var key in keysToRemove)
+                {
+                    algs.TryRemove(key);
+                }
+            }
+            catch (Exception ex) { }
         }
+    }
+
+    public class AlgSet
+    {
+        public AbstractAlg DynamicAlg       { get; set; } = new DynamicAlgV1();
+        public AbstractAlg FallDetectAlg    { get; set; } = new FallDetectAlgV1();
+        public AbstractAlg StaticAlg        { get; set; } = new StaticAlgV1();
+        public AbstractAlg MetaAlg          { get; set; } = new MetaAlgV1();
+    }
+
+    public record AlgKey //must be a record
+    {
+        public string TID { get; set; } = "";
+        public string ModuleID { get; set; } = "";
     }
 }
