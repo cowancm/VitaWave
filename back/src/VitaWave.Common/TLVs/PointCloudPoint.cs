@@ -1,18 +1,10 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Drawing;
+using System.Text.Json.Serialization;
 
 namespace VitaWave.Common.TLVs
 {
-    public record PointCloudPoint
+    public record PointCloudPoint : GenericPoint
     {
-        [JsonPropertyName("x")]
-        public required double X { get; init; }
-
-        [JsonPropertyName("y")]
-        public required double Y { get; init; }
-
-        [JsonPropertyName("z")]
-        public double Z { get; init; }
-
         [JsonPropertyName("tid")]
         public uint TID { get; set; }
 
@@ -21,5 +13,11 @@ namespace VitaWave.Common.TLVs
 
         [JsonPropertyName("snr")]
         public double SNR { get; init; }
+
+        [JsonIgnore]
+        public int ClusterId { get; set; } = -1;
+
+        [JsonIgnore]
+        public bool Visited { get; set; } = false;
     }
 }

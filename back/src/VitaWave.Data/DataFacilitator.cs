@@ -14,7 +14,7 @@ namespace VitaWave.Data
 
         public void Add(EventPacket e)
         {
-            var filteredPersons = e.Filter();
+            var filteredPersons = new List<FilteredPerson>();//e.Filter();
             if (filteredPersons == null || filteredPersons.Count == 0)
                 return;
 
