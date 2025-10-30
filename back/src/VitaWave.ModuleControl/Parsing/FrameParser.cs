@@ -1,7 +1,8 @@
-﻿using System.Runtime.InteropServices;
+﻿using Serilog;
+using System.Runtime.InteropServices;
+using VitaWave.Common.TLVs;
 using VitaWave.ModuleControl.Parsing.TLVs;
 using static VitaWave.ModuleControl.Parsing.TLVs.TLV_Constants;
-using VitaWave.Common.TLVs;
 
 namespace VitaWave.ModuleControl.Parsing
 {
@@ -210,15 +211,21 @@ namespace VitaWave.ModuleControl.Parsing
 
         private static TargetHeight CreateTargetHeight(Span<byte> data)
         {
+            // Log.Information("Raw data (hex): {HexData}", Convert.ToHexString(data));
+
             var targetHeight = new TargetHeight()
             {
-                TargetID = data[0],   // 1 byte
-                MaxZ = MemoryMarshal.Read<float>(data.Slice(1, 4)),
-                MinZ = MemoryMarshal.Read<float>(data.Slice(5, 4)),
+                TargetID = (uint)BitConverter.ToInt32(data.Slice(0, 4)),
+                MaxZ = MemoryMarshal.Read<float>(data.Slice(4, 4)),
+                MinZ = MemoryMarshal.Read<float>(data.Slice(8, 4)),
             };
+
+            // Log.Information("Parsed TargetHeight -> ID: {TargetID}, MaxZ: {MaxZ}, MinZ: {MinZ}",
+            //    targetHeight.TargetID, targetHeight.MaxZ, targetHeight.MinZ); thank you chatgpt for helping me debug this one
 
             return targetHeight;
         }
+
         #endregion
 
         #region Presence Indication
