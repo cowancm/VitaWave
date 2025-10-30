@@ -39,7 +39,9 @@ namespace VitaWave.WebAPI.Playback
                     return null;
                 }
                 string json = File.ReadAllText(filePath);
-                var playbackFile = System.Text.Json.JsonSerializer.Deserialize<PlaybackFile>(json);
+                var events = System.Text.Json.JsonSerializer.Deserialize<List<EventPacket>>(json);
+                var playbackFile = events!.ToPlaybackFile(fileName);
+
                 return playbackFile;
             }
             catch (Exception)
@@ -50,7 +52,7 @@ namespace VitaWave.WebAPI.Playback
 
 
         private static object obj = new();
-        private static List<PlaybackFrame> playbackFrames = new();
+        private static List<EventPacket> events = new();
         private static int numFramesToRecord = 0;
         private static string fileName = "";
         private static bool isRecording = false;
@@ -64,38 +66,48 @@ namespace VitaWave.WebAPI.Playback
 
             lock (obj)
             {
-                playbackFrames.Clear();
+                events.Clear();
                 fileName = fileNam + ".json";
                 numFramesToRecord = framesToRecord;
                 isRecording = true;
             }
         }
 
-        public static async void AddEvent(EventPacket pkt)
+        public static void AddEvent(EventPacket pkt)
         {
             if (!isRecording)
                 return;
 
             lock (obj)
             {
-                var playbackFrame = pkt.ToPlaybackFrame();
-                playbackFrames.Add(playbackFrame);
+                events.Add(pkt);
 
-                if(playbackFrames.Count >= numFramesToRecord)
+                if(events.Count >= numFramesToRecord)
                 {
-                    var file = new PlaybackFile
-                    {
-                        frames = playbackFrames,
-                        fileName = fileName
-                    };
-                    var contents = System.Text.Json.JsonSerializer.Serialize(file);
+                    var contents = System.Text.Json.JsonSerializer.Serialize(events);
                     var pathWithFileName = Path.Combine(_filePath, fileName);
                     File.WriteAllText(pathWithFileName, contents);
-                    playbackFrames.Clear();
+                    events.Clear();
                     isRecording = false;
-                    hubContext?.Clients.All.SendAsync("PlaybackFileComplete", GetPlayBackFilesNames());
                 }
             }
+        }
+
+        private static PlaybackFile ToPlaybackFile(this List<EventPacket> pkts, string fileName)
+        {
+            var frames = new List<PlaybackFrame>();
+
+            foreach (var pkt in pkts)
+            {
+                frames.Add(pkt.ToPlaybackFrame());
+            }
+
+            var playbackFile = new PlaybackFile
+            {
+                fileName = fileName,
+                frames = frames,
+            };
+            return playbackFile;
         }
 
         private static PlaybackFrame ToPlaybackFrame(this EventPacket pkt)

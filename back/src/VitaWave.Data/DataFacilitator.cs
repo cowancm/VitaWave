@@ -14,38 +14,44 @@ namespace VitaWave.Data
 
         public void Add(EventPacket e)
         {
-            var filteredPersons = new List<FilteredPerson>();//e.Filter();
+            var filteredPersons = Filterer.Fit(e.Points);//e.Filter();
+
+            if(filteredPersons.Count > 0)
+            {
+                Log.Information($"Wow! {filteredPersons.Count}");
+            }
+
             if (filteredPersons == null || filteredPersons.Count == 0)
                 return;
 
-            foreach (var person in filteredPersons)
-            {
-                var key = new AlgKey
-                {
-                    ModuleID = e.ModuleID,
-                    TID = person.TID,
-                };
+            //foreach (var person in filteredPersons)
+            //{
+            //    var key = new AlgKey
+            //    {
+            //        ModuleID = e.ModuleID,
+            //        TID = person.TID,
+            //    };
 
-                AlgSet? algSet;
+            //    AlgSet? algSet;
 
-                if(!algs.TryGetValue(key, out algSet))
-                {
-                    algSet = new AlgSet();
-                    algs.TryAdd(key, algSet);
-                }
+            //    if(!algs.TryGetValue(key, out algSet))
+            //    {
+            //        algSet = new AlgSet();
+            //        algs.TryAdd(key, algSet);
+            //    }
 
-                var result = ExecuteAlgs(algSet, person);
+            //    var result = ExecuteAlgs(algSet, person);
 
-                if (result.Item1 != null)
-                {
-                    Raise(result.Item1);
-                }
+            //    if (result.Item1 != null)
+            //    {
+            //        Raise(result.Item1);
+            //    }
 
-                if (result.Item2 != null)
-                {
-                    Raise(result.Item2);
-                }
-            }
+            //    if (result.Item2 != null)
+            //    {
+            //        Raise(result.Item2);
+            //    }
+            //}
         }
 
         private static (ResultEvent?,ResultEvent?) ExecuteAlgs(AlgSet algs, FilteredPerson person)

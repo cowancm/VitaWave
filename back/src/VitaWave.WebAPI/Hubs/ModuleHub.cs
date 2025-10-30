@@ -25,7 +25,7 @@ namespace VitaWave.WebAPI.Hubs
 #endif
 
             //_dataFacilitator.Add(dataPacket);
-            //await _chartHub.BroadcastUnfilteredPoints(dataPacket.ToPersonPointSet());
+            await _chartHub.BroadcastUnfilteredPoints(dataPacket.ToPersonPointSet());
         }
 
         public async Task ModuleIdentifier(string identifier)
