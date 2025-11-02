@@ -15,12 +15,14 @@ namespace VitaWave.WebAPI.Hubs
         {
             _dataFacilitator = dataFacilitator;
             _chartHub = chartHub;
+            ChartHubSends.hubContext = chartHub;
         }
 
         public async Task ModuleData(EventPacket dataPacket)
         {
             _dataFacilitator.Add(dataPacket);
-            await _chartHub.BroadcastUnfilteredPoints(dataPacket.ToPersonPointSet());
+            
+            // await _chartHub.BroadcastUnfilteredPoints(dataPacket.ToPersonPointSet());
         }
 
         public async Task ModuleIdentifier(string identifier)

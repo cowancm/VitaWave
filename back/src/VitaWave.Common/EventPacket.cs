@@ -6,7 +6,6 @@ namespace VitaWave.Common
     {
         public List<PointCloudPoint> Points { get; set; } = new();
         public List<Target> Targets { get; set; } = new();
-        public List<TargetHeight> TargetHeights { get; set; } = new();
         public bool Presence { get; set; } = false;
         public string ModuleID { get; set; } = "";
         public long TimeSinceLastMs { get; set; } = 0;
@@ -15,7 +14,6 @@ namespace VitaWave.Common
         {
             Points = points;
             Targets = targets;
-            TargetHeights = heights;
             Presence = presence;
             TimeSinceLastMs = deltaTime;
             ModuleID = moduleID;

@@ -36,6 +36,8 @@ namespace VitaWave.ModuleControl.Parsing
 
             try //if the bytes fail to be read correctly, throw it out and turn it null
             {
+                List<TargetHeight>? heights = null;
+
                 while (numTlvsRead != frameHeader.NumTLVs)
                 {
                     var tlvHeader = TLVHeaderParser.GetHeaderTypeSize(tlvBuffer.Slice(indexInTlvBuffer, TLVHeaderParser.HEADER_LENGTH));
@@ -56,7 +58,7 @@ namespace VitaWave.ModuleControl.Parsing
                             resultingEvent.TargetIndices = CreateTargetIndices(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.TARGET_HEIGHT:
-                            resultingEvent.Heights = CreateTargetHeights(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
+                            heights = CreateTargetHeights(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.PRESENCE_INDICATION:
                             resultingEvent.PresenceIndication = CreateIsPresent(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
@@ -67,11 +69,23 @@ namespace VitaWave.ModuleControl.Parsing
                     indexInTlvBuffer += numBytesInThisTlv;
                     numTlvsRead++;
                 }
+
+                if (heights != null)
+                {
+                    if (heights?.Count == resultingEvent.Targets?.Count)
+                        for (int i = 0; i < heights!.Count; i++)
+                        {
+                            resultingEvent.Targets![i].TargetHeight = heights[i];
+                        }
+                    else
+                        throw new ArgumentException("Target heights count doesn't match target list count");
+                }
+                
             }
-            catch
+            catch (Exception ex) 
             {
+                Log.Error(ex, $"Error parsing TLV data: {ex.Message}");
                 resultingEvent = null;
-                //this gets logged upstream
             }
 
             return resultingEvent;

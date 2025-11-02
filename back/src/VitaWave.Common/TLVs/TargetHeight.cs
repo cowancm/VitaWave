@@ -2,8 +2,8 @@
 {
     public record TargetHeight
     {
-        public uint TargetID { get; init; }
-        public float MaxZ { get; init; }
-        public float MinZ { get; init; }
+        public uint TargetID { get; set; }
+        public float MaxZ { get; set; }
+        public float MinZ { get; set; }
     }
 }

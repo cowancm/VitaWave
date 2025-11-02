@@ -12,5 +12,6 @@
         public List<float>? Ec { get; init; } // Error covariance matrix
         public float G { get; init; }
         public float ConfidenceLevel { get; init; }
+        public TargetHeight TargetHeight { get; set; } = new();
     }
 }

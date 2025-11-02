@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VitaWave.Common\VitaWave.Common.csproj" />
-	<ProjectReference Include="..\VitaWave.Data\VitaWave.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -13,7 +13,6 @@ namespace VitaWave.ModuleControl.Simulating
             {
                 Points = new(),
                 Presence = true,
-                TargetHeights = new(),
                 Targets = new()
                 {
                     new Target()

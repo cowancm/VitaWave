@@ -18,6 +18,7 @@ namespace VitaWave.Data
                 moduleFacilitators[moduleId] = moduleFacilitator;
                 Log.Information($"Created DataFacilitator for module: {moduleId}");
             }
+            moduleFacilitators[moduleId].Add(dataPacket);
         }
 
         public void Clear(string moduleKey)
