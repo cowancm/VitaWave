@@ -16,7 +16,7 @@ namespace VitaWave.Data
         private event EventHandler<ResultEvent>? _algResultRaise;
         private Queue<EventPacket> _eventQueue = new();         // Used for initial filtering only BEFORE correlation
         private List<TrackedTarget> _trackedTargets = new();    // Used for correlation and algorithms
-        private int MAX_EVENT_QUEUE_SIZE = 1000;
+        private int MAX_EVENT_QUEUE_SIZE = 300;
 
         // General constants
         const double ASSUMED_WALKING_SPEED_MPS = 1.1; // m/s
@@ -24,11 +24,12 @@ namespace VitaWave.Data
 
         // Filtering constants
         const int MAX_NUMBER_OF_TRACKED_TARGETS = 5;
-        const int NUM_REQUIRED_HEIGHT_DELTAS = 350;
+        const int NUM_REQUIRED_HEIGHT_DELTAS = 100;
+        private readonly int MIN_NUMBER_TID_MENTIONS; 
         private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
 
         // Correlation constants
-        const double POSITION_PROXIMITY_THRESHOLD = .1;
+        const double POSITION_PROXIMITY_THRESHOLD = .5;
         const double HEIGHT_PROXIMITY_THRESHOLD = .3;
 
         // Algorithm constants
@@ -37,6 +38,7 @@ namespace VitaWave.Data
         {
             _algResultRaise = eventRaise;
             MIN_MOVEMENT_METERS_FOR_NEW = NUM_REQUIRED_HEIGHT_DELTAS * ASSUMED_WALKING_SPEED_MPS / 2 * NUM_MS_PER_FRAME_MILLISECONDS / 1000;
+            MIN_NUMBER_TID_MENTIONS = MAX_EVENT_QUEUE_SIZE / 4;
         }
 
         object _lock = new object();
@@ -60,10 +62,8 @@ namespace VitaWave.Data
 
             foreach (var target in _eventQueue.Last().Targets)
             {
-                var entryFilterAccepted = EntryFilter(target);
-
-                if (CorrelateTarget(target) && entryFilterAccepted) { }
-                else if (entryFilterAccepted)
+                if (CorrelationFilter(target) && CorrelateTarget(target)) { }
+                else if (EntryFilter(target))
                 {
                     AddNewTarget(target);
                 }
@@ -119,6 +119,14 @@ namespace VitaWave.Data
                 .Sum();
 
             return totalMoved > MIN_MOVEMENT_METERS_FOR_NEW;
+        }
+
+        private bool CorrelationFilter(Target target)
+        {
+            return _eventQueue
+                .SelectMany(e => e.Targets)
+                .Where(t => t.TargetHeight.TargetID == target.TID)
+                .Count() > MIN_NUMBER_TID_MENTIONS;
         }
 
         private bool CorrelateTarget(Target target)
