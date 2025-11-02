@@ -18,22 +18,26 @@ namespace VitaWave.Data
         private List<TrackedTarget> _trackedTargets = new();    // Used for correlation and algorithms
         private int MAX_EVENT_QUEUE_SIZE = 1000;
 
+        // General constants
+        const double ASSUMED_WALKING_SPEED_MPS = 1.1; // m/s
+        const int NUM_MS_PER_FRAME_MILLISECONDS = 55;
+
         // Filtering constants
-        const int MAX_NUMBER_OF_TRACKED_TARGETS = 3;
-        const int NUM_REQUIRED_HEIGHT_DELTAS = 200; // About 1.1 seconds at 5.5ms per frame
+        const int MAX_NUMBER_OF_TRACKED_TARGETS = 5;
+        const int NUM_REQUIRED_HEIGHT_DELTAS = 350;
+        private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
 
         // Correlation constants
-        const double POSITION_PROXIMITY_THRESHOLD = 1;
-        const double HEIGHT_PROXIMITY_THRESHOLD = 0.1;
+        const double POSITION_PROXIMITY_THRESHOLD = .1;
+        const double HEIGHT_PROXIMITY_THRESHOLD = .3;
 
         // Algorithm constants
-
 
         public ModuleTargetTracker(EventHandler<ResultEvent>? eventRaise)
         {
             _algResultRaise = eventRaise;
+            MIN_MOVEMENT_METERS_FOR_NEW = NUM_REQUIRED_HEIGHT_DELTAS * ASSUMED_WALKING_SPEED_MPS / 2 * NUM_MS_PER_FRAME_MILLISECONDS / 1000;
         }
-
 
         object _lock = new object();
         public void Add(EventPacket e)
@@ -43,25 +47,38 @@ namespace VitaWave.Data
                 _eventQueue.Enqueue(e);
                 if (_eventQueue.Count > MAX_EVENT_QUEUE_SIZE)
                     _eventQueue.Dequeue();
-            }
 
-            ProcessNewEvent();
+                ProcessNewEvent();
+            }
         }
 
 
         private void ProcessNewEvent()
         {
-            var initialFiltered = InitialFilter(); // Filtering before correlation and new TID generation
-            if (initialFiltered.Count == 0)
+            if (_eventQueue.Count < MAX_EVENT_QUEUE_SIZE)
                 return;
 
-            foreach (var target in initialFiltered)
+            foreach (var target in _eventQueue.Last().Targets)
             {
-                if (!CorrelateToExisting(target))
+                var entryFilterAccepted = EntryFilter(target);
+
+                if (CorrelateTarget(target) && entryFilterAccepted) { }
+                else if (entryFilterAccepted)
                 {
                     AddNewTarget(target);
                 }
             }
+
+            for (int i = 0; i < _trackedTargets.Count; i++)
+            {
+                var tracked = _trackedTargets[i];
+                if (!tracked.UpdatedThisFrame)
+                {
+                    tracked.FrameCountSinceLastSeen++;
+                }
+            }
+
+            _trackedTargets.ForEach(t => t.UpdatedThisFrame = false);
 
 #if DEBUG
             var points = _trackedTargets.Select(t => t.Target).ToList();
@@ -69,93 +86,161 @@ namespace VitaWave.Data
 #endif
         }
 
-        private List<TrackedTarget> InitialFilter()
+        private bool EntryFilter(Target target)
         {
-            var list = new List<TrackedTarget>();
-            for (int i = 0; i < _eventQueue.Last().Targets.Count; i++)
-            {
-                var target = _eventQueue.Last().Targets[i];
-                var moduleTarget = _eventQueue
-                    .SelectMany(e => e.Targets)
-                    .Where(t => t.TID == target.TID)
-                    .ToList();
+            var moduleTargetReferences = _eventQueue
+                .SelectMany(e => e.Targets)
+                .Where(t => t.TargetHeight.TargetID == target.TID)
+                .ToList();
 
-                // HEIGHT DELTA FILTERING
+            // NUMBER HEIGHT DELTA FILTERING
 
-                if (moduleTarget.Count < NUM_REQUIRED_HEIGHT_DELTAS) // Not enough data yet for counting deltas
-                    continue;
-
-                var heightDeltas = 0;
-                for (int j = 1; j < moduleTarget.Count - 1; j++)
-                {
-                    if (moduleTarget[j - 1].TargetHeight.MaxZ != moduleTarget[j].TargetHeight.MaxZ)
-                    {
-                        heightDeltas++;
-                    }
-                }
-                if (heightDeltas >= NUM_REQUIRED_HEIGHT_DELTAS)
-                {
-                    list.Add(new TrackedTarget(target));
-                }
-
-                // ADD MORE FILTERING METHODS HERE IF NEEDED (use the local list to filter down more)
-
-            }
-            return list;
-        }
-
-        
-
-        private bool CorrelateToExisting(TrackedTarget newTarget)
-        {
-            if (_trackedTargets.Count == 0)
+            if (moduleTargetReferences.Count < NUM_REQUIRED_HEIGHT_DELTAS) // Not enough data yet for counting deltas
                 return false;
 
-            int selectedIndex = -1;
-            var newHeight = newTarget.Target.TargetHeight.MaxZ;
-            var smallestDelta = double.MaxValue;
-
-            for (int i = 0; i < _trackedTargets.Count; i++)
+            var heightDeltas = 0;
+            for (int j = 1; j < moduleTargetReferences.Count - 1; j++)
             {
-                var thisDelta = Math.Abs(_trackedTargets[i].Target.TargetHeight.MaxZ - newHeight);
-                if (thisDelta < smallestDelta)
+                if (moduleTargetReferences[j - 1].TargetHeight.MaxZ != moduleTargetReferences[j].TargetHeight.MaxZ)
                 {
-                    smallestDelta = thisDelta;
-                    selectedIndex = i;
+                    heightDeltas++;
+                }
+            }
+            if (heightDeltas < NUM_REQUIRED_HEIGHT_DELTAS)
+            {
+                return false;
+            }
+
+            var totalMoved = moduleTargetReferences
+                .Skip(1)
+                .Select((t, i) => Math.Sqrt(
+                    Math.Pow(t.X - moduleTargetReferences[i].X, 2) +
+                    Math.Pow(t.Y - moduleTargetReferences[i].Y, 2)))
+                .Sum();
+
+            return totalMoved > MIN_MOVEMENT_METERS_FOR_NEW;
+        }
+
+        private bool CorrelateTarget(Target target)
+        {
+            var trackedTargetPool = _trackedTargets
+                .Where(t => !t.UpdatedThisFrame) // Only consider unseen targets
+                .ToList();
+
+            var positionCorrelated = CorrelateByPosition(target, trackedTargetPool);
+
+            // Position correlation has highest priority
+            if (positionCorrelated.Count == 1)
+            {
+                // Take the first match
+                UpdateTrackedTarget(target, positionCorrelated[0]);
+                return true;
+            }
+
+            var heightCorrelated = CorrelateByHeight(target, trackedTargetPool);
+
+            if (positionCorrelated.Count > 0 && heightCorrelated.Count > 0)
+            {
+                // Find the first common TID in both lists
+                var commonTID = positionCorrelated.Intersect(heightCorrelated).FirstOrDefault();
+                if (commonTID != 0)
+                {
+                    UpdateTrackedTarget(target, commonTID);
+                    return true;
                 }
             }
 
-            if (smallestDelta <= HEIGHT_PROXIMITY_THRESHOLD)
+            if (positionCorrelated.Count > 0)
             {
-                newTarget.Target.TID = _trackedTargets[selectedIndex].Target.TID;
-                _trackedTargets[selectedIndex].Target = newTarget.Target;
-                _trackedTargets[selectedIndex].FrameCountSinceLastSeen = 0;
-                _trackedTargets[selectedIndex].LastSeen = DateTime.Now;
+                UpdateTrackedTarget(target, positionCorrelated[0]);
+                return true;
+            }
+
+            if (heightCorrelated.Count > 0)
+            {
+                UpdateTrackedTarget(target, heightCorrelated[0]);
                 return true;
             }
 
             return false;
         }
 
-        private void AddNewTarget(TrackedTarget newTarget)
+        private List<uint> CorrelateByPosition(Target target, IEnumerable<TrackedTarget> trackedTargets)
+        {
+            var correlated = new List<(uint TID, double Delta)>();
+
+            if (trackedTargets.Count() == 0)
+                return new List<uint>();
+
+            var newX = target.X;
+            var newY = target.Y;
+
+            foreach (var tracked in trackedTargets)
+            {
+                var delta = Math.Sqrt(
+                    Math.Pow(tracked.Target.X - newX, 2) +
+                    Math.Pow(tracked.Target.Y - newY, 2));
+
+                if (delta <= POSITION_PROXIMITY_THRESHOLD)
+                {
+                    correlated.Add((tracked.Target.TID, delta));
+                }
+            }
+
+            // Sort by delta (smallest distance first)
+            correlated.Sort((a, b) => a.Delta.CompareTo(b.Delta));
+
+            // Return only the TIDs in sorted order
+            return correlated.Select(c => c.TID).ToList();
+        }
+
+        private List<uint> CorrelateByHeight(Target target, IEnumerable<TrackedTarget> trackedTargets)
+        {
+            var correlated = new List<(uint TID, double Delta)>();
+            var newHeight = target.TargetHeight.MaxZ;
+
+            foreach (var tracked in trackedTargets)
+            {
+                var delta = Math.Abs(tracked.UnderstoodHeight - newHeight);
+
+                if (delta <= HEIGHT_PROXIMITY_THRESHOLD)
+                {
+                    correlated.Add((tracked.Target.TID, delta));
+                }
+            }
+
+            correlated.Sort((a, b) => a.Delta.CompareTo(b.Delta));
+            return correlated.Select(c => c.TID).ToList();
+        }
+
+        private void AddNewTarget(Target newTarget)
         {
             uint currentTID;
 
-            var moduleTargets = _eventQueue
+            var understoodHeight = _eventQueue
                     .SelectMany(e => e.Targets)
-                    .Where(t => t.TID == newTarget.Target.TID)
-                    .ToList();
-
-            var average = moduleTargets.Average(t => t.TargetHeight.MaxZ);
+                    .Where(t => t.TID == newTarget.TID)
+                    .Average(t => t.TargetHeight.MaxZ);
 
             if (_trackedTargets.Count == 0)
                 currentTID = 1;
             else
                 currentTID = _trackedTargets.Select(t => t.Target.TID).Max() + 1;
 
-            newTarget.Target.TID = currentTID;
-            newTarget.Target.TargetHeight.MaxZ = average;
-            _trackedTargets.Add(newTarget);
+            var newTracked = new TrackedTarget(newTarget, understoodHeight);
+
+            newTracked.Target.TID = currentTID;
+            _trackedTargets.Add(newTracked);
+        }
+
+        private void UpdateTrackedTarget(Target target, uint trackedTargetToUpdate)
+        {
+            var tracked = _trackedTargets.First(t => t.Target.TID == trackedTargetToUpdate);
+            target.TID = tracked.Target.TID; // Preserve TID
+            tracked.Target = target;
+            tracked.FrameCountSinceLastSeen = 0;
+            tracked.LastSeen = DateTime.Now;
+            tracked.UpdatedThisFrame = true;
         }
 
         private void Notify(ResultEvent e)
@@ -169,15 +254,25 @@ namespace VitaWave.Data
     public class TrackedTarget
     {
         public Target Target { get; set; } = new Target();
+        public bool UpdatedThisFrame { get; set; } = true;
+        public float UnderstoodHeight { get; init; }
         public int FrameCountSinceLastSeen { get; set; } = 0;
         public DateTime LastSeen { get; set; } = DateTime.Now;
-        public bool IsStaticRegion { get; set; } = false;
+        public StaticRegion StaticRegion { get; set; } = StaticRegion.Standing;
 
-        public TrackedTarget(Target target)
+        public TrackedTarget(Target target, float understoodHeight)
         {
             Target = target;
+            UnderstoodHeight = understoodHeight;
         }
 
         public TrackedTarget() { }
+    }
+
+    public enum StaticRegion
+    {
+        Standing,
+        Sitting,
+        Laying
     }
 }
