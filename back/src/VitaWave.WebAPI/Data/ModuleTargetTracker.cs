@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,7 +30,7 @@ namespace VitaWave.Data
         private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
 
         // Correlation constants
-        const double POSITION_PROXIMITY_THRESHOLD = .5;
+        const double POSITION_PROXIMITY_THRESHOLD = 2;
         const double HEIGHT_PROXIMITY_THRESHOLD = .3;
 
         // Algorithm constants
@@ -62,7 +63,7 @@ namespace VitaWave.Data
 
             foreach (var target in _eventQueue.Last().Targets)
             {
-                if (CorrelationFilter(target) && CorrelateTarget(target)) { }
+                if (CorrelateTarget(target)) { }
                 else if (EntryFilter(target))
                 {
                     AddNewTarget(target);
@@ -81,7 +82,12 @@ namespace VitaWave.Data
             _trackedTargets.ForEach(t => t.UpdatedThisFrame = false);
 
 #if DEBUG
-            var points = _trackedTargets.Select(t => t.Target).ToList();
+
+            var points = _trackedTargets.Select(t => t.Target.Copy()).ToList();
+            foreach (var point in points)
+            {
+                point.X = -1 * point.X;
+            }
             ChartHubSends.hubContext!.BroadcastUnfilteredPoints(points);
 #endif
         }

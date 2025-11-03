@@ -1,4 +1,6 @@
-﻿namespace VitaWave.Common.TLVs
+﻿using System.Runtime.InteropServices;
+
+namespace VitaWave.Common.TLVs
 {
     public record Target : PersonPoint
     {
@@ -13,5 +15,17 @@
         public float G { get; init; }
         public float ConfidenceLevel { get; init; }
         public TargetHeight TargetHeight { get; set; } = new();
+
+        public Target Copy()
+        {
+            return new Target()
+            {
+                X = this.X,
+                Y = this.Y,
+                TID = this.TID,
+                Status = "fuck"
+            };
+        }
+        
     }
 }
