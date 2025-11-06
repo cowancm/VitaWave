@@ -30,7 +30,7 @@ namespace VitaWave.Data
         private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
 
         // Correlation constants
-        const double POSITION_PROXIMITY_THRESHOLD = 2;
+        const double POSITION_PROXIMITY_THRESHOLD = 1;
         const double HEIGHT_PROXIMITY_THRESHOLD = .3;
 
         // Algorithm constants
