@@ -26,7 +26,8 @@ namespace VitaWave.Data
         // Filtering constants
         const int MAX_NUMBER_OF_TRACKED_TARGETS = 1;
         const int NUM_REQUIRED_HEIGHT_DELTAS = 200;
-        private readonly int MIN_NUMBER_TID_MENTIONS; 
+        const int RECORRELATION_FRAME_THRESHOLD = 200;
+        private readonly int MIN_NUMBER_TID_MENTIONS;
         private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
 
         // Correlation constants
@@ -45,7 +46,7 @@ namespace VitaWave.Data
         object _lock = new object();
         public void Add(EventPacket e)
         {
-            lock(_lock)
+            lock (_lock)
             {
                 _eventQueue.Enqueue(e);
                 if (_eventQueue.Count > MAX_EVENT_QUEUE_SIZE)
@@ -61,10 +62,35 @@ namespace VitaWave.Data
             if (_eventQueue.Count < MAX_EVENT_QUEUE_SIZE)
                 return;
 
+            // Check if we should allow recorrelation for stale tracked targets
+            bool allowRecorrelation = _trackedTargets.Count == 1 &&
+                                     _trackedTargets[0].FrameCountSinceLastSeen > RECORRELATION_FRAME_THRESHOLD;
+
+            // Build a list of best correlations for each incoming target
+            var targetCorrelations = new List<(Target target, uint? correlatedTID, double score)>();
+
             foreach (var target in _eventQueue.Last().Targets)
             {
-                if (CorrelateTarget(target)) { }
-                else if (EntryFilter(target) && _trackedTargets.Count < MAX_NUMBER_OF_TRACKED_TARGETS)
+                var correlation = FindBestCorrelation(target, allowRecorrelation);
+                targetCorrelations.Add((target, correlation.correlatedTID, correlation.score));
+            }
+
+            // Sort by best correlation score (lower is better)
+            targetCorrelations = targetCorrelations
+                .OrderBy(tc => tc.correlatedTID.HasValue ? tc.score : double.MaxValue)
+                .ToList();
+
+            // Process correlations in order of quality
+            var usedTrackedTargets = new HashSet<uint>();
+
+            foreach (var (target, correlatedTID, score) in targetCorrelations)
+            {
+                if (correlatedTID.HasValue && !usedTrackedTargets.Contains(correlatedTID.Value))
+                {
+                    UpdateTrackedTarget(target, correlatedTID.Value);
+                    usedTrackedTargets.Add(correlatedTID.Value);
+                }
+                else if (!correlatedTID.HasValue && EntryFilter(target) && _trackedTargets.Count < MAX_NUMBER_OF_TRACKED_TARGETS)
                 {
                     AddNewTarget(target);
                 }
@@ -135,56 +161,53 @@ namespace VitaWave.Data
                 .Count() > MIN_NUMBER_TID_MENTIONS;
         }
 
-        private bool CorrelateTarget(Target target)
+        private (uint? correlatedTID, double score) FindBestCorrelation(Target target, bool allowRecorrelation = false)
         {
             var trackedTargetPool = _trackedTargets
                 .Where(t => !t.UpdatedThisFrame) // Only consider unseen targets
+                .Where(t => allowRecorrelation || t.FrameCountSinceLastSeen <= RECORRELATION_FRAME_THRESHOLD)
                 .ToList();
 
+            if (trackedTargetPool.Count == 0)
+                return (null, double.MaxValue);
+
             var positionCorrelated = CorrelateByPosition(target, trackedTargetPool);
-
-            // Position correlation has highest priority
-            if (positionCorrelated.Count == 1)
-            {
-                // Take the first match
-                UpdateTrackedTarget(target, positionCorrelated[0]);
-                return true;
-            }
-
             var heightCorrelated = CorrelateByHeight(target, trackedTargetPool);
 
-            if (positionCorrelated.Count > 0 && heightCorrelated.Count > 0)
-            {
-                // Find the first common TID in both lists
-                var commonTID = positionCorrelated.Intersect(heightCorrelated).FirstOrDefault();
-                if (commonTID != 0)
-                {
-                    UpdateTrackedTarget(target, commonTID);
-                    return true;
-                }
-            }
-
+            // Position correlation has highest priority
             if (positionCorrelated.Count > 0)
             {
-                UpdateTrackedTarget(target, positionCorrelated[0]);
-                return true;
+                // Check if the best position match is also in height correlated
+                var bestPositionTID = positionCorrelated[0].TID;
+                var bestPositionScore = positionCorrelated[0].Delta;
+
+                if (heightCorrelated.Any(h => h.TID == bestPositionTID))
+                {
+                    // Both position and height agree - excellent match
+                    var heightScore = heightCorrelated.First(h => h.TID == bestPositionTID).Delta;
+                    var combinedScore = bestPositionScore + heightScore * 0.5; // Weight position more
+                    return (bestPositionTID, combinedScore);
+                }
+
+                // Position only
+                return (bestPositionTID, bestPositionScore);
             }
 
+            // Height correlation only
             if (heightCorrelated.Count > 0)
             {
-                UpdateTrackedTarget(target, heightCorrelated[0]);
-                return true;
+                return (heightCorrelated[0].TID, heightCorrelated[0].Delta + 10); // Penalize height-only matches
             }
 
-            return false;
+            return (null, double.MaxValue);
         }
 
-        private List<uint> CorrelateByPosition(Target target, IEnumerable<TrackedTarget> trackedTargets)
+        private List<(uint TID, double Delta)> CorrelateByPosition(Target target, IEnumerable<TrackedTarget> trackedTargets)
         {
             var correlated = new List<(uint TID, double Delta)>();
 
             if (trackedTargets.Count() == 0)
-                return new List<uint>();
+                return new List<(uint TID, double Delta)>();
 
             var newX = target.X;
             var newY = target.Y;
@@ -204,11 +227,10 @@ namespace VitaWave.Data
             // Sort by delta (smallest distance first)
             correlated.Sort((a, b) => a.Delta.CompareTo(b.Delta));
 
-            // Return only the TIDs in sorted order
-            return correlated.Select(c => c.TID).ToList();
+            return correlated;
         }
 
-        private List<uint> CorrelateByHeight(Target target, IEnumerable<TrackedTarget> trackedTargets)
+        private List<(uint TID, double Delta)> CorrelateByHeight(Target target, IEnumerable<TrackedTarget> trackedTargets)
         {
             var correlated = new List<(uint TID, double Delta)>();
             var newHeight = target.TargetHeight.MaxZ;
@@ -224,7 +246,7 @@ namespace VitaWave.Data
             }
 
             correlated.Sort((a, b) => a.Delta.CompareTo(b.Delta));
-            return correlated.Select(c => c.TID).ToList();
+            return correlated;
         }
 
         private void AddNewTarget(Target newTarget)
@@ -276,7 +298,7 @@ namespace VitaWave.Data
         // public bool ThresholdFallDetection = true;
         // private bool FallDetectThresholdChecker(TrackedTarget target)
         // {
-            
+
         // }
     }
 
