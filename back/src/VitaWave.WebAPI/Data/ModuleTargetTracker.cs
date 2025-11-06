@@ -17,15 +17,15 @@ namespace VitaWave.Data
         private event EventHandler<ResultEvent>? _algResultRaise;
         private Queue<EventPacket> _eventQueue = new();         // Used for initial filtering only BEFORE correlation
         private List<TrackedTarget> _trackedTargets = new();    // Used for correlation and algorithms
-        private int MAX_EVENT_QUEUE_SIZE = 300;
+        private int MAX_EVENT_QUEUE_SIZE = 500;
 
         // General constants
         const double ASSUMED_WALKING_SPEED_MPS = 1.1; // m/s
         const int NUM_MS_PER_FRAME_MILLISECONDS = 55;
 
         // Filtering constants
-        const int MAX_NUMBER_OF_TRACKED_TARGETS = 5;
-        const int NUM_REQUIRED_HEIGHT_DELTAS = 100;
+        const int MAX_NUMBER_OF_TRACKED_TARGETS = 1;
+        const int NUM_REQUIRED_HEIGHT_DELTAS = 200;
         private readonly int MIN_NUMBER_TID_MENTIONS; 
         private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
 
@@ -38,7 +38,7 @@ namespace VitaWave.Data
         public ModuleTargetTracker(EventHandler<ResultEvent>? eventRaise)
         {
             _algResultRaise = eventRaise;
-            MIN_MOVEMENT_METERS_FOR_NEW = NUM_REQUIRED_HEIGHT_DELTAS * ASSUMED_WALKING_SPEED_MPS / 2 * NUM_MS_PER_FRAME_MILLISECONDS / 1000;
+            MIN_MOVEMENT_METERS_FOR_NEW = NUM_REQUIRED_HEIGHT_DELTAS * ASSUMED_WALKING_SPEED_MPS * NUM_MS_PER_FRAME_MILLISECONDS / 1000 * .5;
             MIN_NUMBER_TID_MENTIONS = MAX_EVENT_QUEUE_SIZE / 4;
         }
 
@@ -64,7 +64,7 @@ namespace VitaWave.Data
             foreach (var target in _eventQueue.Last().Targets)
             {
                 if (CorrelateTarget(target)) { }
-                else if (EntryFilter(target))
+                else if (EntryFilter(target) && _trackedTargets.Count < MAX_NUMBER_OF_TRACKED_TARGETS)
                 {
                     AddNewTarget(target);
                 }
@@ -251,18 +251,33 @@ namespace VitaWave.Data
         {
             var tracked = _trackedTargets.First(t => t.Target.TID == trackedTargetToUpdate);
             target.TID = tracked.Target.TID; // Preserve TID
+
+            tracked.FrameCount_Height.Add((tracked.FrameCountSinceLastSeen, target.Z));
+
             tracked.Target = target;
             tracked.FrameCountSinceLastSeen = 0;
             tracked.LastSeen = DateTime.Now;
             tracked.UpdatedThisFrame = true;
+
         }
 
         private void Notify(ResultEvent e)
         {
-            Task.Run(() => {
+            Task.Run(() =>
+            {
                 _algResultRaise?.Invoke(this, e);
             });
         }
+
+
+        // ALGORITHMS
+
+        // const double HEIGHT_DROP_RATIO = .5; //amount person can fall
+        // public bool ThresholdFallDetection = true;
+        // private bool FallDetectThresholdChecker(TrackedTarget target)
+        // {
+            
+        // }
     }
 
     public class TrackedTarget
@@ -273,6 +288,7 @@ namespace VitaWave.Data
         public int FrameCountSinceLastSeen { get; set; } = 0;
         public DateTime LastSeen { get; set; } = DateTime.Now;
         public StaticRegion StaticRegion { get; set; } = StaticRegion.Standing;
+        public List<(int, double)> FrameCount_Height = new();
 
         public TrackedTarget(Target target, float understoodHeight)
         {
