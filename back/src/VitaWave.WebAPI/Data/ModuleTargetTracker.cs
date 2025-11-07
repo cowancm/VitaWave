@@ -68,11 +68,11 @@ namespace VitaWave.Data
             if (_eventQueue.Count < MAX_EVENT_QUEUE_SIZE)
                 return;
 
-            foreach (var e in _eventQueue)
+            if (_eventQueue.Last().Targets.Count != 0)
             {
-                var smallestZ = e.Targets.Min(t => t.Z);
+                var smallestZ = _eventQueue.Last().Targets.Min(t => t.Z);
                 if (smallestZ < 0)
-                    foreach (var t in e.Targets)
+                    foreach (var t in _eventQueue.Last().Targets)
                         t.Z += smallestZ * -1;
             }
 
