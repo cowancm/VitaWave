@@ -424,7 +424,7 @@ namespace VitaWave.Data
             var deltaaDistance = Math.Sqrt(
                 Math.Pow(last.X - first.X, 2) +
                 Math.Pow(last.Y - first.Y, 2));
-            var neededDistanceForActive = .5; // 20 * 55ms = 1.1s, so ~1m/s walking speed
+            var neededDistanceForActive = .14;
 
 
             if (tracked.FrameCountSinceLastSeen >= 100)
