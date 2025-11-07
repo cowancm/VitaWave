@@ -4,7 +4,7 @@ namespace VitaWave.Common.TLVs
 {
     public record Target : PersonPoint
     {
-        public float Z { get; init; }
+        public float Z { get; set; }
         public float VelX { get; init; }
         public float VelY { get; init; }
         public float VelZ { get; init; }

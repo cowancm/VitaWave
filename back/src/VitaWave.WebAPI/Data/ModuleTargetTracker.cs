@@ -38,7 +38,7 @@ namespace VitaWave.Data
         const double FALL_HEIGHT_DROP_THRESHOLD = 0.4; // meters - minimum drop to consider as fall
         const int FALL_MAX_FRAMES = 20; // maximum frames over which a fall can occur
         const double FALL_RATE_THRESHOLD = 0.02; // meters per frame minimum rate
-        const double LOW_HEIGHT_THRESHOLD = 0.6; // meters - height considered "on ground"
+        const double LOW_HEIGHT_THRESHOLD = 0.3; // meters - height considered "on ground"
         const int FRAMES_LOW_FOR_FALL = 10; // frames target must stay low after drop
         const int FRAMES_MISSING_FOR_FALL = 15; // frames target can be missing and still count as fall
 
@@ -67,6 +67,14 @@ namespace VitaWave.Data
         {
             if (_eventQueue.Count < MAX_EVENT_QUEUE_SIZE)
                 return;
+
+            foreach (var e in _eventQueue)
+            {
+                var smallestZ = e.Targets.Min(t => t.Z);
+                if (smallestZ < 0)
+                    foreach (var t in e.Targets)
+                        t.Z += smallestZ * -1;
+            }
 
             // Check if we should allow recorrelation for stale tracked targets
             bool allowRecorrelation = _trackedTargets.Count == 1 &&
