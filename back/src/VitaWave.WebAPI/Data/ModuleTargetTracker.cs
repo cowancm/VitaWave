@@ -314,11 +314,14 @@ namespace VitaWave.Data
             if (tracked.FrameCount_Height.Count < 2)
                 return;
 
+            List<(int, double)> recentHistory;
+            double currentHeight;
+
             // Check if person has recovered from a fall
             if (tracked.FallDetected)
             {
-                var currentHeight = tracked.Target.Z;
-                var recentHistory = tracked.FrameCount_Height.TakeLast(RECOVERY_FRAMES_REQUIRED).ToList();
+                currentHeight = tracked.Target.Z;
+                recentHistory = tracked.FrameCount_Height.TakeLast(RECOVERY_FRAMES_REQUIRED).ToList();
 
                 // Check if they've been at recovery height for required frames
                 if (recentHistory.Count >= RECOVERY_FRAMES_REQUIRED)
@@ -336,14 +339,14 @@ namespace VitaWave.Data
                 return;
             }
 
-            var recentHistory = tracked.FrameCount_Height.TakeLast(FALL_MAX_FRAMES).ToList();
+            recentHistory = tracked.FrameCount_Height.TakeLast(FALL_MAX_FRAMES).ToList();
 
             if (recentHistory.Count < 2)
                 return;
 
             // Find the maximum height in recent history
             var maxHeight = recentHistory.Max(h => h.Item2);
-            var currentHeight = tracked.Target.Z;
+            currentHeight = tracked.Target.Z;
             var heightDrop = maxHeight - currentHeight;
 
             // Check if there was a significant drop
