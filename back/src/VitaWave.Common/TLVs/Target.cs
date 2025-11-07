@@ -23,7 +23,7 @@ namespace VitaWave.Common.TLVs
                 X = this.X,
                 Y = this.Y,
                 TID = this.TID,
-                Status = "fuck"
+                Status = this.Status,
             };
         }
         

@@ -14,7 +14,7 @@ namespace VitaWave.Data
             var moduleId = dataPacket.ModuleID;
             if (!moduleFacilitators.ContainsKey(moduleId))
             {
-                var moduleFacilitator = new ModuleTargetTracker(EventRaise);
+                var moduleFacilitator = new ModuleTargetTracker(EventRaise, moduleId);
                 moduleFacilitators[moduleId] = moduleFacilitator;
                 Log.Information($"Created DataFacilitator for module: {moduleId}");
             }
