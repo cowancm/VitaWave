@@ -17,7 +17,7 @@ namespace VitaWave.Data
         private event EventHandler<ResultEvent>? _algResultRaise;
         private Queue<EventPacket> _eventQueue = new();         // Used for initial filtering only BEFORE correlation
         private List<TrackedTarget> _trackedTargets = new();    // Used for correlation and algorithms
-        private int MAX_EVENT_QUEUE_SIZE = 150;
+        private int MAX_EVENT_QUEUE_SIZE = 500;
 
         // General constants
         const double ASSUMED_WALKING_SPEED_MPS = 1.1; // m/s
@@ -25,8 +25,8 @@ namespace VitaWave.Data
 
         // Filtering constants
         const int MAX_NUMBER_OF_TRACKED_TARGETS = 1;
-        const int NUM_REQUIRED_HEIGHT_DELTAS = 75;
-        const int RECORRELATION_FRAME_THRESHOLD = 75;
+        const int NUM_REQUIRED_HEIGHT_DELTAS = 200;
+        const int RECORRELATION_FRAME_THRESHOLD = 200;
         private readonly int MIN_NUMBER_TID_MENTIONS;
         private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
 
@@ -41,8 +41,6 @@ namespace VitaWave.Data
         const double LOW_HEIGHT_THRESHOLD = 0.6; // meters - height considered "on ground"
         const int FRAMES_LOW_FOR_FALL = 10; // frames target must stay low after drop
         const int FRAMES_MISSING_FOR_FALL = 15; // frames target can be missing and still count as fall
-        const double RECOVERY_HEIGHT_THRESHOLD = 1.2; // meters - height indicating person has recovered/stood up
-        const int RECOVERY_FRAMES_REQUIRED = 5; // frames at recovery height to consider recovered
 
         public ModuleTargetTracker(EventHandler<ResultEvent>? eventRaise)
         {
@@ -70,14 +68,11 @@ namespace VitaWave.Data
             if (_eventQueue.Count < MAX_EVENT_QUEUE_SIZE)
                 return;
 
-            // Reset "UpdatedThisFrame" at start of processing this new incoming frame.
-            // We'll mark tracks as updated while correlating, and then increment FrameCountSinceLastSeen for ones not updated.
-            foreach (var t in _trackedTargets)
-                t.UpdatedThisFrame = false;
-
+            // Check if we should allow recorrelation for stale tracked targets
             bool allowRecorrelation = _trackedTargets.Count == 1 &&
                                      _trackedTargets[0].FrameCountSinceLastSeen > RECORRELATION_FRAME_THRESHOLD;
 
+            // Build a list of best correlations for each incoming target
             var targetCorrelations = new List<(Target target, uint? correlatedTID, double score)>();
 
             foreach (var target in _eventQueue.Last().Targets)
@@ -86,11 +81,12 @@ namespace VitaWave.Data
                 targetCorrelations.Add((target, correlation.correlatedTID, correlation.score));
             }
 
-            // Sort by best correlation score (lower is better). Uncorrelated targets have large score and go last.
+            // Sort by best correlation score (lower is better)
             targetCorrelations = targetCorrelations
                 .OrderBy(tc => tc.correlatedTID.HasValue ? tc.score : double.MaxValue)
                 .ToList();
 
+            // Process correlations in order of quality
             var usedTrackedTargets = new HashSet<uint>();
 
             foreach (var (target, correlatedTID, score) in targetCorrelations)
@@ -106,24 +102,25 @@ namespace VitaWave.Data
                 }
             }
 
-            // For any tracked target that did not receive an update this frame, increment missing counter.
             for (int i = 0; i < _trackedTargets.Count; i++)
             {
                 var tracked = _trackedTargets[i];
                 if (!tracked.UpdatedThisFrame)
                 {
                     tracked.FrameCountSinceLastSeen++;
-                    // Do not append heights when target missing (we only append on update)
                 }
             }
 
-            // Now run fall detection on all tracked targets
+            _trackedTargets.ForEach(t => t.UpdatedThisFrame = false);
+
+            // Run fall detection on all tracked targets
             foreach (var tracked in _trackedTargets)
             {
                 CheckForFall(tracked);
             }
 
 #if DEBUG
+
             var points = _trackedTargets.Select(t => t.Target.Copy()).ToList();
             foreach (var point in points)
             {
@@ -141,12 +138,12 @@ namespace VitaWave.Data
                 .ToList();
 
             // NUMBER HEIGHT DELTA FILTERING
+
             if (moduleTargetReferences.Count < NUM_REQUIRED_HEIGHT_DELTAS) // Not enough data yet for counting deltas
                 return false;
 
             var heightDeltas = 0;
-            // j starts at 1 and must go to last index (Count - 1) inclusive -> j < Count
-            for (int j = 1; j < moduleTargetReferences.Count; j++)
+            for (int j = 1; j < moduleTargetReferences.Count - 1; j++)
             {
                 if (moduleTargetReferences[j - 1].TargetHeight.MaxZ != moduleTargetReferences[j].TargetHeight.MaxZ)
                 {
@@ -289,21 +286,13 @@ namespace VitaWave.Data
             var tracked = _trackedTargets.First(t => t.Target.TID == trackedTargetToUpdate);
             target.TID = tracked.Target.TID; // Preserve TID
 
-            // append current height (chronological)
-            tracked.FrameHeights.Add(target.TargetHeight.MaxZ);
-
-            // Optionally trim history to a reasonable length (say keep last 500 entries)
-            const int MAX_HEIGHT_HISTORY = 500;
-            if (tracked.FrameHeights.Count > MAX_HEIGHT_HISTORY)
-            {
-                int removeCount = tracked.FrameHeights.Count - MAX_HEIGHT_HISTORY;
-                tracked.FrameHeights.RemoveRange(0, removeCount);
-            }
+            tracked.FrameCount_Height.Add((tracked.FrameCountSinceLastSeen, target.Z));
 
             tracked.Target = target;
             tracked.FrameCountSinceLastSeen = 0;
             tracked.LastSeen = DateTime.Now;
             tracked.UpdatedThisFrame = true;
+
         }
 
         private void Notify(ResultEvent e)
@@ -319,94 +308,75 @@ namespace VitaWave.Data
 
         private void CheckForFall(TrackedTarget tracked)
         {
-            // Need at least two heights to compute a drop
-            if (tracked.FrameHeights.Count < 2)
+            // Need sufficient height history to detect falls
+            if (tracked.FrameCount_Height.Count < 2)
                 return;
 
-            // If person already marked as fallen, check for recovery
+            // Already detected a fall for this target
             if (tracked.FallDetected)
+                return;
+
+            var recentHistory = tracked.FrameCount_Height.TakeLast(FALL_MAX_FRAMES).ToList();
+
+            if (recentHistory.Count < 2)
+                return;
+
+            // Find the maximum height in recent history
+            var maxHeight = recentHistory.Max(h => h.Item2);
+            var currentHeight = tracked.Target.Z;
+            var heightDrop = maxHeight - currentHeight;
+
+            // Check if there was a significant drop
+            if (heightDrop >= FALL_HEIGHT_DROP_THRESHOLD)
             {
-                // require RECOVERY_FRAMES_REQUIRED of recent heights above RECOVERY_HEIGHT_THRESHOLD to clear fall
-                var recent = tracked.FrameHeights.Skip(Math.Max(0, tracked.FrameHeights.Count - RECOVERY_FRAMES_REQUIRED)).ToList();
-                if (recent.Count >= RECOVERY_FRAMES_REQUIRED)
+                // Calculate the frames over which the drop occurred
+                var maxHeightFrame = recentHistory.Last(h => h.Item2 == maxHeight);
+                var maxHeightIndex = recentHistory.IndexOf(maxHeightFrame);
+                var framesSinceDrop = recentHistory.Count - maxHeightIndex - 1;
+
+                if (framesSinceDrop > 0 && framesSinceDrop <= FALL_MAX_FRAMES)
                 {
-                    int recoveredFrames = recent.Count(h => h >= RECOVERY_HEIGHT_THRESHOLD);
-                    if (recoveredFrames >= RECOVERY_FRAMES_REQUIRED)
+                    var dropRate = heightDrop / framesSinceDrop;
+
+                    // Check if drop rate is fast enough
+                    if (dropRate >= FALL_RATE_THRESHOLD)
                     {
-                        tracked.FallDetected = false;
-                        tracked.FallDetectedTime = null;
-                        Console.WriteLine($"[FALL RECOVERY] TID: {tracked.Target.TID} has recovered to standing height");
+                        // Check if target is now low or disappeared
+                        bool isLow = currentHeight <= LOW_HEIGHT_THRESHOLD;
+                        bool disappeared = tracked.FrameCountSinceLastSeen >= FRAMES_MISSING_FOR_FALL;
+
+                        // Check if target stayed low
+                        bool stayedLow = false;
+                        if (isLow)
+                        {
+                            var recentLowFrames = recentHistory
+                                .TakeLast(Math.Min(FRAMES_LOW_FOR_FALL, recentHistory.Count))
+                                .Count(h => h.Item2 <= LOW_HEIGHT_THRESHOLD);
+                            stayedLow = recentLowFrames >= Math.Min(FRAMES_LOW_FOR_FALL, recentHistory.Count);
+                        }
+
+                        if (isLow && stayedLow || disappeared)
+                        {
+                            tracked.FallDetected = true;
+                            tracked.FallDetectedTime = DateTime.Now;
+
+                            Console.WriteLine($"[FALL DETECTED] TID: {tracked.Target.TID}, " +
+                                            $"Height Drop: {heightDrop:F3}m, " +
+                                            $"Drop Rate: {dropRate:F3}m/frame, " +
+                                            $"Frames: {framesSinceDrop}, " +
+                                            $"Final Height: {currentHeight:F3}m, " +
+                                            $"Status: {(disappeared ? "Target Lost" : "Target Low")}");
+
+                            // Notify via event
+                            var fallEvent = new ResultEvent
+                            {
+                                TID = (int)tracked.Target.TID,
+                                ResultId = ResultID.Fall
+                            };
+                            Notify(fallEvent);
+                        }
                     }
                 }
-
-                // if already detected, do not detect again immediately
-                return;
-            }
-
-            // consider only the last FALL_MAX_FRAMES heights
-            var recentHeights = tracked.FrameHeights
-                .Skip(Math.Max(0, tracked.FrameHeights.Count - FALL_MAX_FRAMES))
-                .ToList();
-
-            if (recentHeights.Count < 2)
-                return;
-
-            double currentHeight = recentHeights.Last();
-            double maxHeight = recentHeights.Max();
-            double heightDrop = maxHeight - currentHeight;
-
-            if (heightDrop < FALL_HEIGHT_DROP_THRESHOLD)
-                return; // not enough drop
-
-            // find index of last occurrence of maxHeight in recentHeights
-            int maxIndex = -1;
-            for (int i = recentHeights.Count - 1; i >= 0; i--)
-            {
-                if (Math.Abs(recentHeights[i] - maxHeight) < 1e-6)
-                {
-                    maxIndex = i;
-                    break;
-                }
-            }
-            if (maxIndex < 0)
-                return;
-
-            int framesSinceDrop = recentHeights.Count - maxIndex - 1;
-            if (framesSinceDrop <= 0 || framesSinceDrop > FALL_MAX_FRAMES)
-                return;
-
-            double dropRate = heightDrop / framesSinceDrop; // meters per frame
-
-            if (dropRate < FALL_RATE_THRESHOLD)
-                return; // too slow to be a fall
-
-            bool isLow = currentHeight <= LOW_HEIGHT_THRESHOLD;
-            bool disappeared = tracked.FrameCountSinceLastSeen >= FRAMES_MISSING_FOR_FALL;
-
-            // check whether target stayed low for the required number of frames
-            int framesToCheck = Math.Min(FRAMES_LOW_FOR_FALL, recentHeights.Count);
-            var lastN = recentHeights.Skip(Math.Max(0, recentHeights.Count - framesToCheck)).ToList();
-            int lowCount = lastN.Count(h => h <= LOW_HEIGHT_THRESHOLD);
-            bool stayedLow = lowCount >= Math.Min(FRAMES_LOW_FOR_FALL, recentHeights.Count);
-
-            if ((isLow && stayedLow) || disappeared)
-            {
-                tracked.FallDetected = true;
-                tracked.FallDetectedTime = DateTime.Now;
-
-                Console.WriteLine($"[FALL DETECTED] TID: {tracked.Target.TID}, " +
-                                $"Height Drop: {heightDrop:F3}m, " +
-                                $"Drop Rate: {dropRate:F3}m/frame, " +
-                                $"FramesSinceDrop: {framesSinceDrop}, " +
-                                $"Final Height: {currentHeight:F3}m, " +
-                                $"Status: {(disappeared ? "Target Lost" : "Target Low")}");
-
-                var fallEvent = new ResultEvent
-                {
-                    TID = (int)tracked.Target.TID,
-                    ResultId = ResultID.Fall
-                };
-                Notify(fallEvent);
             }
         }
 
@@ -421,15 +391,12 @@ namespace VitaWave.Data
     public class TrackedTarget
     {
         public Target Target { get; set; } = new Target();
-        public bool UpdatedThisFrame { get; set; } = false;
+        public bool UpdatedThisFrame { get; set; } = true;
         public float UnderstoodHeight { get; init; }
         public int FrameCountSinceLastSeen { get; set; } = 0;
         public DateTime LastSeen { get; set; } = DateTime.Now;
         public StaticRegion StaticRegion { get; set; } = StaticRegion.Standing;
-
-        // store just heights in chronological order (old -> new)
-        public List<double> FrameHeights { get; } = new();
-
+        public List<(int, double)> FrameCount_Height = new();
         public bool FallDetected { get; set; } = false;
         public DateTime? FallDetectedTime { get; set; } = null;
 
@@ -441,7 +408,6 @@ namespace VitaWave.Data
 
         public TrackedTarget() { }
     }
-
 
     public enum StaticRegion
     {
