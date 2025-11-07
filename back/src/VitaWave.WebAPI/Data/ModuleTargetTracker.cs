@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -34,7 +35,13 @@ namespace VitaWave.Data
         const double POSITION_PROXIMITY_THRESHOLD = 1;
         const double HEIGHT_PROXIMITY_THRESHOLD = .3;
 
-        // Algorithm constants
+        // Fall detection constants
+        const double FALL_HEIGHT_DROP_THRESHOLD = 0.4; // meters - minimum drop to consider as fall
+        const int FALL_MAX_FRAMES = 20; // maximum frames over which a fall can occur
+        const double FALL_RATE_THRESHOLD = 0.02; // meters per frame minimum rate
+        const double LOW_HEIGHT_THRESHOLD = 0.6; // meters - height considered "on ground"
+        const int FRAMES_LOW_FOR_FALL = 10; // frames target must stay low after drop
+        const int FRAMES_MISSING_FOR_FALL = 15; // frames target can be missing and still count as fall
 
         public ModuleTargetTracker(EventHandler<ResultEvent>? eventRaise)
         {
@@ -106,6 +113,12 @@ namespace VitaWave.Data
             }
 
             _trackedTargets.ForEach(t => t.UpdatedThisFrame = false);
+
+            // Run fall detection on all tracked targets
+            foreach (var tracked in _trackedTargets)
+            {
+                CheckForFall(tracked);
+            }
 
 #if DEBUG
 
@@ -294,6 +307,80 @@ namespace VitaWave.Data
 
         // ALGORITHMS
 
+        private void CheckForFall(TrackedTarget tracked)
+        {
+            // Need sufficient height history to detect falls
+            if (tracked.FrameCount_Height.Count < 2)
+                return;
+
+            // Already detected a fall for this target
+            if (tracked.FallDetected)
+                return;
+
+            var recentHistory = tracked.FrameCount_Height.TakeLast(FALL_MAX_FRAMES).ToList();
+
+            if (recentHistory.Count < 2)
+                return;
+
+            // Find the maximum height in recent history
+            var maxHeight = recentHistory.Max(h => h.Item2);
+            var currentHeight = tracked.Target.Z;
+            var heightDrop = maxHeight - currentHeight;
+
+            // Check if there was a significant drop
+            if (heightDrop >= FALL_HEIGHT_DROP_THRESHOLD)
+            {
+                // Calculate the frames over which the drop occurred
+                var maxHeightFrame = recentHistory.Last(h => h.Item2 == maxHeight);
+                var maxHeightIndex = recentHistory.IndexOf(maxHeightFrame);
+                var framesSinceDrop = recentHistory.Count - maxHeightIndex - 1;
+
+                if (framesSinceDrop > 0 && framesSinceDrop <= FALL_MAX_FRAMES)
+                {
+                    var dropRate = heightDrop / framesSinceDrop;
+
+                    // Check if drop rate is fast enough
+                    if (dropRate >= FALL_RATE_THRESHOLD)
+                    {
+                        // Check if target is now low or disappeared
+                        bool isLow = currentHeight <= LOW_HEIGHT_THRESHOLD;
+                        bool disappeared = tracked.FrameCountSinceLastSeen >= FRAMES_MISSING_FOR_FALL;
+
+                        // Check if target stayed low
+                        bool stayedLow = false;
+                        if (isLow)
+                        {
+                            var recentLowFrames = recentHistory
+                                .TakeLast(Math.Min(FRAMES_LOW_FOR_FALL, recentHistory.Count))
+                                .Count(h => h.Item2 <= LOW_HEIGHT_THRESHOLD);
+                            stayedLow = recentLowFrames >= Math.Min(FRAMES_LOW_FOR_FALL, recentHistory.Count);
+                        }
+
+                        if (isLow && stayedLow || disappeared)
+                        {
+                            tracked.FallDetected = true;
+                            tracked.FallDetectedTime = DateTime.Now;
+
+                            Log.Information($"[FALL DETECTED] TID: {tracked.Target.TID}, " +
+                                            $"Height Drop: {heightDrop:F3}m, " +
+                                            $"Drop Rate: {dropRate:F3}m/frame, " +
+                                            $"Frames: {framesSinceDrop}, " +
+                                            $"Final Height: {currentHeight:F3}m, " +
+                                            $"Status: {(disappeared ? "Target Lost" : "Target Low")}");
+
+                            // Notify via event
+                            var fallEvent = new ResultEvent
+                            {
+                                TID = (int)tracked.Target.TID,
+                                ResultId = ResultID.Fall
+                            };
+                            Notify(fallEvent);
+                        }
+                    }
+                }
+            }
+        }
+
         // const double HEIGHT_DROP_RATIO = .5; //amount person can fall
         // public bool ThresholdFallDetection = true;
         // private bool FallDetectThresholdChecker(TrackedTarget target)
@@ -311,6 +398,8 @@ namespace VitaWave.Data
         public DateTime LastSeen { get; set; } = DateTime.Now;
         public StaticRegion StaticRegion { get; set; } = StaticRegion.Standing;
         public List<(int, double)> FrameCount_Height = new();
+        public bool FallDetected { get; set; } = false;
+        public DateTime? FallDetectedTime { get; set; } = null;
 
         public TrackedTarget(Target target, float understoodHeight)
         {
