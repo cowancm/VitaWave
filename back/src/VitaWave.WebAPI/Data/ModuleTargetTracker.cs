@@ -17,7 +17,7 @@ namespace VitaWave.Data
         private event EventHandler<ResultEvent>? _algResultRaise;
         private Queue<EventPacket> _eventQueue = new();         // Used for initial filtering only BEFORE correlation
         private List<TrackedTarget> _trackedTargets = new();    // Used for correlation and algorithms
-        private int MAX_EVENT_QUEUE_SIZE = 500;
+        private int MAX_EVENT_QUEUE_SIZE = 100;
 
         // General constants
         const double ASSUMED_WALKING_SPEED_MPS = 1.1; // m/s
@@ -25,8 +25,8 @@ namespace VitaWave.Data
 
         // Filtering constants
         const int MAX_NUMBER_OF_TRACKED_TARGETS = 1;
-        const int NUM_REQUIRED_HEIGHT_DELTAS = 200;
-        const int RECORRELATION_FRAME_THRESHOLD = 200;
+        const int NUM_REQUIRED_HEIGHT_DELTAS = 50;
+        const int RECORRELATION_FRAME_THRESHOLD = 50;
         private readonly int MIN_NUMBER_TID_MENTIONS;
         private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
 
