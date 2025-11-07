@@ -1,5 +1,4 @@
-﻿using Serilog;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -18,7 +17,7 @@ namespace VitaWave.Data
         private event EventHandler<ResultEvent>? _algResultRaise;
         private Queue<EventPacket> _eventQueue = new();         // Used for initial filtering only BEFORE correlation
         private List<TrackedTarget> _trackedTargets = new();    // Used for correlation and algorithms
-        private int MAX_EVENT_QUEUE_SIZE = 500;
+        private int MAX_EVENT_QUEUE_SIZE = 150;
 
         // General constants
         const double ASSUMED_WALKING_SPEED_MPS = 1.1; // m/s
@@ -26,8 +25,8 @@ namespace VitaWave.Data
 
         // Filtering constants
         const int MAX_NUMBER_OF_TRACKED_TARGETS = 1;
-        const int NUM_REQUIRED_HEIGHT_DELTAS = 200;
-        const int RECORRELATION_FRAME_THRESHOLD = 200;
+        const int NUM_REQUIRED_HEIGHT_DELTAS = 75;
+        const int RECORRELATION_FRAME_THRESHOLD = 75;
         private readonly int MIN_NUMBER_TID_MENTIONS;
         private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
 
@@ -42,6 +41,8 @@ namespace VitaWave.Data
         const double LOW_HEIGHT_THRESHOLD = 0.6; // meters - height considered "on ground"
         const int FRAMES_LOW_FOR_FALL = 10; // frames target must stay low after drop
         const int FRAMES_MISSING_FOR_FALL = 15; // frames target can be missing and still count as fall
+        const double RECOVERY_HEIGHT_THRESHOLD = 1.2; // meters - height indicating person has recovered/stood up
+        const int RECOVERY_FRAMES_REQUIRED = 5; // frames at recovery height to consider recovered
 
         public ModuleTargetTracker(EventHandler<ResultEvent>? eventRaise)
         {
@@ -313,9 +314,27 @@ namespace VitaWave.Data
             if (tracked.FrameCount_Height.Count < 2)
                 return;
 
-            // Already detected a fall for this target
+            // Check if person has recovered from a fall
             if (tracked.FallDetected)
+            {
+                var currentHeight = tracked.Target.Z;
+                var recentHistory = tracked.FrameCount_Height.TakeLast(RECOVERY_FRAMES_REQUIRED).ToList();
+
+                // Check if they've been at recovery height for required frames
+                if (recentHistory.Count >= RECOVERY_FRAMES_REQUIRED)
+                {
+                    var recoveredFrames = recentHistory.Count(h => h.Item2 >= RECOVERY_HEIGHT_THRESHOLD);
+                    if (recoveredFrames >= RECOVERY_FRAMES_REQUIRED)
+                    {
+                        tracked.FallDetected = false;
+                        tracked.FallDetectedTime = null;
+                        Console.WriteLine($"[FALL RECOVERY] TID: {tracked.Target.TID} has recovered to standing height");
+                    }
+                }
+
+                // If fall was already detected, don't check for another one yet
                 return;
+            }
 
             var recentHistory = tracked.FrameCount_Height.TakeLast(FALL_MAX_FRAMES).ToList();
 
@@ -361,7 +380,7 @@ namespace VitaWave.Data
                             tracked.FallDetected = true;
                             tracked.FallDetectedTime = DateTime.Now;
 
-                            Log.Information($"[FALL DETECTED] TID: {tracked.Target.TID}, " +
+                            Console.WriteLine($"[FALL DETECTED] TID: {tracked.Target.TID}, " +
                                             $"Height Drop: {heightDrop:F3}m, " +
                                             $"Drop Rate: {dropRate:F3}m/frame, " +
                                             $"Frames: {framesSinceDrop}, " +
