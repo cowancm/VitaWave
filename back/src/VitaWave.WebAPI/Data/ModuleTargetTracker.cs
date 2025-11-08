@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -17,6 +19,7 @@ namespace VitaWave.Data
         private event EventHandler<ResultEvent>? _algResultRaise;
         private Queue<EventPacket> _eventQueue = new();         // Used for initial filtering only BEFORE correlation
         private List<TrackedTarget> _trackedTargets = new();    // Used for correlation and algorithms
+        private string moduleID = "";
         private int MAX_EVENT_QUEUE_SIZE = 100;
 
         // General constants
@@ -37,16 +40,20 @@ namespace VitaWave.Data
         // Fall detection constants
         const double FALL_HEIGHT_DROP_THRESHOLD = 0.4; // meters - minimum drop to consider as fall
         const int FALL_MAX_FRAMES = 20; // maximum frames over which a fall can occur
-        const double FALL_RATE_THRESHOLD = 0.02; // meters per frame minimum rate
+        const double FALL_RATE_THRESHOLD = 0.03; // meters per frame minimum rate
         const double LOW_HEIGHT_THRESHOLD = 0.3; // meters - height considered "on ground"
         const int FRAMES_LOW_FOR_FALL = 10; // frames target must stay low after drop
         const int FRAMES_MISSING_FOR_FALL = 15; // frames target can be missing and still count as fall
 
-        public ModuleTargetTracker(EventHandler<ResultEvent>? eventRaise)
+        // Movement constants
+        private readonly double MOVEMENT_THRESHOLD_METERS_PER_FRAME = ASSUMED_WALKING_SPEED_MPS * NUM_MS_PER_FRAME_MILLISECONDS / 1000 * 2.0;
+
+        public ModuleTargetTracker(EventHandler<ResultEvent>? eventRaise, string moduleID)
         {
             _algResultRaise = eventRaise;
             MIN_MOVEMENT_METERS_FOR_NEW = NUM_REQUIRED_HEIGHT_DELTAS * ASSUMED_WALKING_SPEED_MPS * NUM_MS_PER_FRAME_MILLISECONDS / 1000 * .5;
             MIN_NUMBER_TID_MENTIONS = MAX_EVENT_QUEUE_SIZE / 4;
+            this.moduleID = moduleID;
         }
 
         object _lock = new object();
@@ -127,14 +134,22 @@ namespace VitaWave.Data
                 CheckForFall(tracked);
             }
 
-#if DEBUG
-
-            var points = _trackedTargets.Select(t => t.Target.Copy()).ToList();
-            foreach (var point in points)
+            if (_trackedTargets.Count > 0)
             {
-                point.X = -1 * point.X;
+                var result = CheckStatus(_trackedTargets[0]); // Currently only tracking one target
+                NotifyIfStatusChanged(_trackedTargets[0], result);
             }
-            ChartHubSends.hubContext!.BroadcastUnfilteredPoints(points);
+
+#if DEBUG
+            if (_trackedTargets.Count > 0)
+            {
+                var points = _trackedTargets.Select(t => t.Target.Copy()).ToList();
+                foreach (var point in points)
+                {
+                    point.X = -1 * point.X;
+                }
+                ChartHubSends.hubContext!.BroadcastUnfilteredPoints(points);
+            }
 #endif
         }
 
@@ -300,14 +315,21 @@ namespace VitaWave.Data
             tracked.FrameCountSinceLastSeen = 0;
             tracked.LastSeen = DateTime.Now;
             tracked.UpdatedThisFrame = true;
-
+            tracked.PastTargetData.Add(target);
         }
 
-        private void Notify(ResultEvent e)
+        private void Notify(ResultID e)
         {
+            var ev = new ResultEvent
+            {
+                ModuleID = moduleID,
+                TID = 1, // if we get more than one target going, change this
+                ResultId = e
+            };
+
             Task.Run(() =>
             {
-                _algResultRaise?.Invoke(this, e);
+                _algResultRaise?.Invoke(this, ev);
             });
         }
 
@@ -318,10 +340,6 @@ namespace VitaWave.Data
         {
             // Need sufficient height history to detect falls
             if (tracked.FrameCount_Height.Count < 2)
-                return;
-
-            // Already detected a fall for this target
-            if (tracked.FallDetected)
                 return;
 
             var recentHistory = tracked.FrameCount_Height.TakeLast(FALL_MAX_FRAMES).ToList();
@@ -365,10 +383,18 @@ namespace VitaWave.Data
 
                         if (isLow && stayedLow || disappeared)
                         {
-                            tracked.FallDetected = true;
+                            var now = DateTime.Now;
+
+                            if (tracked.FallDetectedTime.HasValue &&
+                                (now - tracked.FallDetectedTime.Value).TotalSeconds < 59)
+                            {
+                                // Already detected a fall recently
+                                return;
+                            }
+
                             tracked.FallDetectedTime = DateTime.Now;
 
-                            Console.WriteLine($"[FALL DETECTED] TID: {tracked.Target.TID}, " +
+                            Log.Information($"[FALL DETECTED] TID: {tracked.Target.TID}, " +
                                             $"Height Drop: {heightDrop:F3}m, " +
                                             $"Drop Rate: {dropRate:F3}m/frame, " +
                                             $"Frames: {framesSinceDrop}, " +
@@ -376,51 +402,88 @@ namespace VitaWave.Data
                                             $"Status: {(disappeared ? "Target Lost" : "Target Low")}");
 
                             // Notify via event
-                            var fallEvent = new ResultEvent
-                            {
-                                TID = (int)tracked.Target.TID,
-                                ResultId = ResultID.Fall
-                            };
-                            Notify(fallEvent);
+                            Notify(ResultID.Fall);
                         }
                     }
                 }
             }
         }
 
-        // const double HEIGHT_DROP_RATIO = .5; //amount person can fall
-        // public bool ThresholdFallDetection = true;
-        // private bool FallDetectThresholdChecker(TrackedTarget target)
-        // {
-
-        // }
-    }
-
-    public class TrackedTarget
-    {
-        public Target Target { get; set; } = new Target();
-        public bool UpdatedThisFrame { get; set; } = true;
-        public float UnderstoodHeight { get; init; }
-        public int FrameCountSinceLastSeen { get; set; } = 0;
-        public DateTime LastSeen { get; set; } = DateTime.Now;
-        public StaticRegion StaticRegion { get; set; } = StaticRegion.Standing;
-        public List<(int, double)> FrameCount_Height = new();
-        public bool FallDetected { get; set; } = false;
-        public DateTime? FallDetectedTime { get; set; } = null;
-
-        public TrackedTarget(Target target, float understoodHeight)
+        private ResultID CheckStatus(TrackedTarget tracked)
         {
-            Target = target;
-            UnderstoodHeight = understoodHeight;
+            var pastData = tracked.PastTargetData;
+            var framesToConsider = 20;
+
+            if (pastData.Count < framesToConsider)
+                return ResultID.Unknown;
+
+            var lastFrames = pastData.TakeLast(framesToConsider).ToList();
+
+            var first = lastFrames.First();
+            var last = lastFrames.Last();
+            var deltaaDistance = Math.Sqrt(
+                Math.Pow(last.X - first.X, 2) +
+                Math.Pow(last.Y - first.Y, 2));
+            var neededDistanceForActive = .14;
+
+
+            if (tracked.FrameCountSinceLastSeen >= 100)
+            {
+                return ResultID.Standing;
+            }
+
+            if (tracked.FrameCountSinceLastSeen >= 36000) // 10 minutes at ~55ms per frame
+            {
+                return ResultID.NonDetection10Hr;
+            }
+            else if (tracked.FrameCountSinceLastSeen >= 7200) // ~2 minutes at ~55ms per frame
+            {
+                return ResultID.Inactive2Hr;
+            }
+
+            if (deltaaDistance >= neededDistanceForActive)
+            {
+                return ResultID.Active;
+            }
+            else
+            {
+                return ResultID.Standing;
+            }
         }
 
-        public TrackedTarget() { }
-    }
+        private void NotifyIfStatusChanged(TrackedTarget tracked, ResultID newStatus)
+        {
+            Log.Information($"Status: {newStatus.ToString()}");
 
-    public enum StaticRegion
-    {
-        Standing,
-        Sitting,
-        Laying
+            tracked.Target.Status = newStatus.ToString();
+
+            if (tracked.LastResultID != newStatus)
+            {
+                Notify(newStatus);
+            }
+
+            tracked.LastResultID = newStatus;
+        }
+
+        public class TrackedTarget
+        {
+            public Target Target { get; set; } = new Target();
+            public bool UpdatedThisFrame { get; set; } = true;
+            public float UnderstoodHeight { get; init; }
+            public int FrameCountSinceLastSeen { get; set; } = 0;
+            public ResultID LastResultID { get; set; } = ResultID.Unknown;
+            public DateTime LastSeen { get; set; } = DateTime.Now;
+            public List<(int, double)> FrameCount_Height = new();
+            public List<Target> PastTargetData = new();
+            public DateTime? FallDetectedTime { get; set; } = null;
+
+            public TrackedTarget(Target target, float understoodHeight)
+            {
+                Target = target;
+                UnderstoodHeight = understoodHeight;
+            }
+
+            public TrackedTarget() { }
+        }
     }
 }
