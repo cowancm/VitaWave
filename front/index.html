@@ -341,7 +341,7 @@
             <div class="timestamp">
                 Last updated at: <span id="lastUpdated">--</span>
             </div>
-            
+
             <!-- Test Panel -->
             <div class="test-panel">
                 <h3>Test Point Input</h3>
@@ -370,45 +370,57 @@
 
         <!-- Data Tab -->
         <div id="dataTab" class="hidden">
-            <div class="data-view"></div>
-            <div class="button-group">
-                <button class="export-button xlsx">Save as .xlsx</button>
-                <button class="export-button csv">Save as .csv</button>
+            <div class="test-panel" style="margin-top: 1.5rem;">
+                <h3>Backend Controls</h3>
+                <div class="button-group">
+                    <!-- Status message -->
+                    <div id="statusMessage" style="margin-bottom:8px; color: #d1d5db;"></div>
+
+                    <!-- Data output -->
+                    <div id="dataOutput" class="data-view"></div>
+
+                    <!-- Buttons -->
+                    <button id="startLogging" class="add-point-button">Start Logging</button>
+                    <button id="stopLogging" class="clear-button">Stop Logging</button>
+                    <button id="clearDatabase" class="clear-button">Clear Database</button>
+                    <button id="readEvents" class="add-point-button">Read Events</button>
+                    <button id="saveCsv" class="export-button csv">Save as CSV</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <script src="node_modules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
-    <script src="chart.js"></script>
-    <script>
-        // Tab switching logic
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const graphTab = document.getElementById('graphTab');
-        const dataTab = document.getElementById('dataTab');
-        const lastUpdatedEl = document.getElementById('lastUpdated');
+        <script src="node_modules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+        <script src="chart.js"></script>
+        <script src="database.js"></script>
+        <script>
+            // Tab switching logic
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const graphTab = document.getElementById('graphTab');
+            const dataTab = document.getElementById('dataTab');
+            const lastUpdatedEl = document.getElementById('lastUpdated');
 
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const tab = button.dataset.tab;
-                
-                // Update active states
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tab = button.dataset.tab;
 
-                // Show/hide tabs
-                if (tab === 'graph') {
-                    graphTab.classList.remove('hidden');
-                    dataTab.classList.add('hidden');
-                    lastUpdatedEl.textContent = new Date().toLocaleString();
-                } else {
-                    graphTab.classList.add('hidden');
-                    dataTab.classList.remove('hidden');
-                }
+                    // Update active states
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    // Show/hide tabs
+                    if (tab === 'graph') {
+                        graphTab.classList.remove('hidden');
+                        dataTab.classList.add('hidden');
+                        lastUpdatedEl.textContent = new Date().toLocaleString();
+                    } else {
+                        graphTab.classList.add('hidden');
+                        dataTab.classList.remove('hidden');
+                    }
+                });
             });
-        });
 
-        // Initialize timestamp
-        lastUpdatedEl.textContent = new Date().toLocaleString();
-    </script>
+            // Initialize timestamp
+            lastUpdatedEl.textContent = new Date().toLocaleString();
+        </script>
 </body>
 </html>
