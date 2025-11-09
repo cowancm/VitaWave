@@ -36,10 +36,6 @@ public class DatabaseController : ControllerBase
             if (!Directory.Exists(_exportPath))
                 Directory.CreateDirectory(_exportPath);
 
-            Console.WriteLine($"[DatabaseController] Database Path: {_dbPath}");
-            Console.WriteLine($"[DatabaseController] Export Path: {_exportPath}");
-
-            // Ensure table exists (in case DataBase.cs hasn't run yet)
             EnsureTableExists();
         }
         catch (Exception ex)
