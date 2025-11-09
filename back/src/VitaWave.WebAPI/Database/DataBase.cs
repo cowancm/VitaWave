@@ -19,21 +19,36 @@ namespace VitaWave.DataBase
     {
         private readonly string _dbPath;
 
-        public DataBase(DataFacilitator data)
+        public EventController()
         {
-            // Build a path for the database inside the project’s Database folder
-            string baseDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "vitawave");
-            data.EventRaise += HandleEventFromAlgo
-            // /Database/database/ folder
-            string dbFolder = Path.Combine(baseDir, "Database", "database");
-            Directory.CreateDirectory(dbFolder);
+            // Start in the user's vitawave folder
+            var dir = new DirectoryInfo(
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "vitawave")
+            );
 
-            _dbPath = Path.Combine(dbFolder, "EventTable.db");
+            // Climb upward until we find the folder named "VitaWave.DataBase"
+            while (dir != null && dir.Name != "VitaWave.DataBase")
+            {
+                dir = dir.Parent;
+            }
 
-            CreateTable();
+            if (dir == null)
+                throw new DirectoryNotFoundException("Could not locate 'VitaWave.DataBase' folder.");
+
+            var projectRoot = dir.FullName;
+
+            // Construct paths
+            _dbPath = Path.Combine(projectRoot, "Database", "EventTable.db");
+            _exportPath = Path.Combine(projectRoot, "Exports");
+
+            // Create export folder if missing
+            if (!Directory.Exists(_exportPath))
+                Directory.CreateDirectory(_exportPath);
+
+            Console.WriteLine($"Database Path: {_dbPath}");
+            Console.WriteLine($"Export Path: {_exportPath}");
         }
+
 
         private string GetConnectionString()
         {

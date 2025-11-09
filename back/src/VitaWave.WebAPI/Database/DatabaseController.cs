@@ -1,4 +1,12 @@
-﻿[ApiController]
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Data.SQLite;
+using System.Text;
+using VitaWave.Data;
+using VitaWave.Common;
+using VitaWave.DataBase;
+
+
+[ApiController]
 [Route("[controller]")]
 public class EventController : ControllerBase
 {
@@ -8,17 +16,35 @@ public class EventController : ControllerBase
 
     public EventController()
     {
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "vitawave");
+        // Start in the user's vitawave folder
+        var dir = new DirectoryInfo(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "vitawave")
+        );
+
+        // Climb upward until we find the folder named "VitaWave.DataBase"
         while (dir != null && dir.Name != "VitaWave.DataBase")
+        {
             dir = dir.Parent;
+        }
 
         if (dir == null)
-            throw new DirectoryNotFoundException("Could not locate project root folder.");
+            throw new DirectoryNotFoundException("Could not locate 'VitaWave.DataBase' folder.");
 
         var projectRoot = dir.FullName;
+
+        // Construct paths
         _dbPath = Path.Combine(projectRoot, "Database", "EventTable.db");
         _exportPath = Path.Combine(projectRoot, "Exports");
+
+        // Create export folder if missing
+        if (!Directory.Exists(_exportPath))
+            Directory.CreateDirectory(_exportPath);
+
+        Console.WriteLine($"Database Path: {_dbPath}");
+        Console.WriteLine($"Export Path: {_exportPath}");
     }
+
+
 
     [HttpPost("start")]
     public IActionResult StartLogging()
@@ -35,7 +61,7 @@ public class EventController : ControllerBase
     }
 
     [HttpPost("insert")]
-    public IActionResult InsertEvent(string moduleId, string tid, string evt, int criticality)
+    public IActionResult InsertEvent([FromBody] ResultEvent ev)
     {
         if (!_loggingEnabled)
             return BadRequest("Logging is disabled. Start logging first.");
@@ -46,10 +72,10 @@ public class EventController : ControllerBase
         using var cmd = new SQLiteCommand(con);
         cmd.CommandText = @"INSERT INTO EventTable(ModuleID, tid, event, criticality) 
                             VALUES(@m, @t, @e, @c)";
-        cmd.Parameters.AddWithValue("@m", moduleId);
-        cmd.Parameters.AddWithValue("@t", tid);
-        cmd.Parameters.AddWithValue("@e", evt);
-        cmd.Parameters.AddWithValue("@c", criticality);
+        cmd.Parameters.AddWithValue("@m", ev.ModuleID);
+        cmd.Parameters.AddWithValue("@t", ev.TID);
+        cmd.Parameters.AddWithValue("@e", ev.ResultId);
+        cmd.Parameters.AddWithValue("@c", 1);
 
         try
         {
@@ -130,7 +156,7 @@ public class EventController : ControllerBase
         return File(bytes, "text/csv", fileName);
     }
 
-    private List<object> GetFilteredEvents(
+    private List<eventData> GetFilteredEvents(
         string? tid, string? moduleId, string? evt, int? minCriticality, int? maxCriticality)
     {
         using var con = new SQLiteConnection($"Data Source={_dbPath}");
@@ -141,10 +167,10 @@ public class EventController : ControllerBase
         foreach (var p in parameters) cmd.Parameters.Add(p);
 
         using var reader = cmd.ExecuteReader();
-        var list = new List<object>();
+        var list = new List<eventData>();
         while (reader.Read())
         {
-            list.Add(new
+            list.Add(new eventData
             {
                 ModuleID = reader["ModuleID"].ToString() ?? "",
                 Tid = reader["tid"].ToString() ?? "",
