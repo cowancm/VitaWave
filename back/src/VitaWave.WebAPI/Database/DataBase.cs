@@ -33,6 +33,9 @@ namespace VitaWave.DataBase
             // Same database file as the controller
             _dbPath = Path.Combine(dbFolder, "EventTable.db");
 
+            Console.WriteLine($"[DataBase.cs] Database Path: {_dbPath}");
+            Console.WriteLine($"[DataBase.cs] Database exists: {File.Exists(_dbPath)}");
+
             CreateTable();
         }
 
@@ -43,69 +46,102 @@ namespace VitaWave.DataBase
 
         private void CreateTable()
         {
-            using var con = new SQLiteConnection(GetConnectionString());
-            con.Open();
+            try
+            {
+                using var con = new SQLiteConnection(GetConnectionString());
+                con.Open();
 
-            using var cmd = new SQLiteCommand(con);
-            cmd.CommandText = @"
-                CREATE TABLE IF NOT EXISTS EventTable (
-                    ModuleID TEXT NOT NULL,
-                    tid TEXT NOT NULL,
-                    event TEXT NOT NULL,
-                    criticality INTEGER CHECK(criticality BETWEEN 1 AND 10),
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                );";
-            cmd.ExecuteNonQuery();
+                using var cmd = new SQLiteCommand(con);
+                cmd.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS EventTable (
+                        ModuleID TEXT NOT NULL,
+                        tid TEXT NOT NULL,
+                        event TEXT NOT NULL,
+                        criticality INTEGER CHECK(criticality BETWEEN 1 AND 10),
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );";
+                cmd.ExecuteNonQuery();
 
+                Console.WriteLine("[DataBase.cs] EventTable created/verified successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DataBase.cs] ERROR creating table: {ex.Message}");
+                throw;
+            }
         }
 
         public void HandleEventFromAlgo(object? s, ResultEvent e)
         {
-            using var con = new SQLiteConnection(GetConnectionString());
-            con.Open();
-
-            using var cmd = new SQLiteCommand(con);
-            cmd.CommandText = "INSERT INTO EventTable(ModuleID, tid, event, criticality) VALUES(@m, @t, @e, @c)";
-            cmd.Parameters.AddWithValue("@m", e.ModuleID);
-            cmd.Parameters.AddWithValue("@t", e.TID);
-            cmd.Parameters.AddWithValue("@e", e.ResultId);
-            cmd.Parameters.AddWithValue("@c", 1);
-
             try
             {
-                cmd.ExecuteNonQuery();
+                // Validate input
+                if (e == null)
+                {
+                    Console.WriteLine("[DataBase.cs] WARNING: Received null ResultEvent");
+                    return;
+                }
+
+                Console.WriteLine($"[DataBase.cs] Inserting event - ModuleID: {e.ModuleID}, TID: {e.TID}, ResultId: {e.ResultId}");
+
+                using var con = new SQLiteConnection(GetConnectionString());
+                con.Open();
+
+                using var cmd = new SQLiteCommand(con);
+                cmd.CommandText = "INSERT INTO EventTable(ModuleID, tid, event, criticality) VALUES(@m, @t, @e, @c)";
+
+                // Add parameters with proper values
+                cmd.Parameters.AddWithValue("@m", e.ModuleID ?? "Unknown");
+                cmd.Parameters.AddWithValue("@t", e.TID ?? "Unknown");
+                cmd.Parameters.AddWithValue("@e", e.ResultId ?? "Unknown");
+                cmd.Parameters.AddWithValue("@c", 1);
+
+                int rowsAffected = cmd.ExecuteNonQuery();
+                Console.WriteLine($"[DataBase.cs] Event inserted successfully. Rows affected: {rowsAffected}");
             }
             catch (SQLiteException ex)
             {
+                Console.WriteLine($"[DataBase.cs] SQLite ERROR inserting event: {ex.Message}");
+                Console.WriteLine($"[DataBase.cs] SQLite Error Code: {ex.ErrorCode}");
+                Console.WriteLine($"[DataBase.cs] Stack Trace: {ex.StackTrace}");
             }
-
-            // Optional: print all stored events
-            cmd.CommandText = "SELECT ModuleID, tid, event, criticality, timestamp FROM EventTable";
-            using SQLiteDataReader rdr = cmd.ExecuteReader();
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DataBase.cs] GENERAL ERROR inserting event: {ex.Message}");
+                Console.WriteLine($"[DataBase.cs] Stack Trace: {ex.StackTrace}");
+            }
         }
 
         public List<eventData> GetAllEvents()
         {
             var events = new List<eventData>();
 
-            using var con = new SQLiteConnection(GetConnectionString());
-            con.Open();
-
-            using var cmd = new SQLiteCommand("SELECT ModuleID, tid, event, criticality FROM EventTable", con);
-            using SQLiteDataReader rdr = cmd.ExecuteReader();
-
-            while (rdr.Read())
+            try
             {
-                events.Add(new eventData
+                using var con = new SQLiteConnection(GetConnectionString());
+                con.Open();
+
+                using var cmd = new SQLiteCommand("SELECT ModuleID, tid, event, criticality FROM EventTable", con);
+                using SQLiteDataReader rdr = cmd.ExecuteReader();
+
+                while (rdr.Read())
                 {
-                    ModuleID = rdr["ModuleID"].ToString() ?? "",
-                    Tid = rdr["tid"].ToString() ?? "",
-                    Event = rdr["event"].ToString() ?? "",
-                    Criticality = Convert.ToInt32(rdr["criticality"])
-                });
+                    events.Add(new eventData
+                    {
+                        ModuleID = rdr["ModuleID"].ToString() ?? "",
+                        Tid = rdr["tid"].ToString() ?? "",
+                        Event = rdr["event"].ToString() ?? "",
+                        Criticality = Convert.ToInt32(rdr["criticality"])
+                    });
+                }
+
+                Console.WriteLine($"[DataBase.cs] Retrieved {events.Count} events.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DataBase.cs] ERROR retrieving events: {ex.Message}");
             }
 
-            Console.WriteLine($"[DataBase.cs] Retrieved {events.Count} events.");
             return events;
         }
     }
