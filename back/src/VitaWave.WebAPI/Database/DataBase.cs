@@ -21,19 +21,22 @@ namespace VitaWave.DataBase
 
         public DataBase(DataFacilitator data)
         {
-            // Build a path for the database inside the project’s Database folder
+            // Build a path for the database inside the backend project’s Database folder
             string baseDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "vitawave");
-            data.EventRaise += HandleEventFromAlgo;
-            // /Database/database/ folder
-            string dbFolder = Path.Combine(baseDir, "Database", "database");
-            Directory.CreateDirectory(dbFolder);
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "VitaWave");
 
-            _dbPath = Path.Combine(dbFolder, "EventTable.db");
+            string projectRoot = Path.Combine(baseDir, "back", "src", "VitaWave.WebAPI");
+
+            // Subscribe to events
+            data.EventRaise += HandleEventFromAlgo;
+
+            // Database path
+            _dbPath = Path.Combine(projectRoot, "Database", "EventTable.db");
 
             CreateTable();
         }
+
 
         private string GetConnectionString()
         {

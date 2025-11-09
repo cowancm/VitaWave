@@ -57,6 +57,32 @@ stopBtn.addEventListener("click", async () => {
     }
 });
 
+
+// insert Events into database
+document.getElementById('insertEvents').addEventListener('click', async () => {
+    const eventData = {
+        ModuleID: "Module_Alpha",   // replace with real module ID
+        TID: 1,
+        ResultId: "Fall"            // or any ResultID you want
+    };
+
+    try {
+        const response = await fetch('http://localhost:5000/Event/insert', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(eventData)
+        });
+
+        const text = await response.text();
+        document.getElementById('statusMessage').innerText = text;
+    } catch (err) {
+        console.error(err);
+        document.getElementById('statusMessage').innerText = "Failed to insert event.";
+    }
+});
+
 // Clear the database
 clearBtn.addEventListener("click", async () => {
     if (!confirm("Are you sure you want to clear all events?")) return;
