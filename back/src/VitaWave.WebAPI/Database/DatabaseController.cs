@@ -8,24 +8,45 @@ using VitaWave.DataBase;
 
 [ApiController]
 [Route("[controller]")]
-public EventController() : ControllerBase
+public class EventController : ControllerBase
 {
-    // Start in the user's vitawave folder
-    var baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "VitaWave");
+    private static bool _loggingEnabled = false;
+    private readonly string _dbPath;
+    private readonly string _exportPath;
 
-    // Go into the backend project folder
-    var projectRoot = Path.Combine(baseDir, "back", "src", "VitaWave.WebAPI");
+    public EventController()
+    {
+        // Start in the user's vitawave folder
+        var dir = new DirectoryInfo(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "vitawave")
+        );
 
-    // Database path
-    _dbPath = Path.Combine(projectRoot, "Database", "EventTable.db");
+        // Climb upward until we find the folder named "VitaWave.DataBase"
+        while (dir != null && dir.Name != "VitaWave.DataBase")
+        {
+            dir = dir.Parent;
+        }
 
-    Console.WriteLine($"Database Path: {_dbPath}");
-}
+        if (dir == null)
+            throw new DirectoryNotFoundException("Could not locate 'VitaWave.DataBase' folder.");
+
+        var projectRoot = dir.FullName;
+
+        // Construct paths
+        _dbPath = Path.Combine(projectRoot, "Database", "EventTable.db");
+        _exportPath = Path.Combine(projectRoot, "Exports");
+
+        // Create export folder if missing
+        if (!Directory.Exists(_exportPath))
+            Directory.CreateDirectory(_exportPath);
+
+        Console.WriteLine($"Database Path: {_dbPath}");
+        Console.WriteLine($"Export Path: {_exportPath}");
+    }
 
 
 
-
-[HttpPost("start")]
+    [HttpPost("start")]
     public IActionResult StartLogging()
     {
         _loggingEnabled = true;
