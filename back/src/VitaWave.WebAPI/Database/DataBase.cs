@@ -9,9 +9,9 @@ namespace VitaWave.DataBase
 {
     public class eventData
     {
-        public string ModuleID { get; set; }
-        public string Tid { get; set; }
-        public string Event { get; set; }
+        public string ModuleID { get; set; } = "";
+        public string Tid { get; set; } = "";
+        public string Event { get; set; } = "";
         public int Criticality { get; set; }
     }
 
@@ -21,16 +21,22 @@ namespace VitaWave.DataBase
 
         public DataBase(DataFacilitator data)
         {
-            // Build a path for the database inside the project’s Database folder
-            string baseDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "vitawave");
+            // Match the EXACT same path as DatabaseController
+            // C:\Users\Ashto\VitaWave\back\src\VitaWave.WebAPI\Database\EventTable.db
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var projectRoot = Path.Combine(userProfile, "VitaWave", "back", "src", "VitaWave.WebAPI");
+
             data.EventRaise += HandleEventFromAlgo;
-            // /Database/database/ folder
-            string dbFolder = Path.Combine(baseDir, "Database", "database");
+
+            // Database folder
+            string dbFolder = Path.Combine(projectRoot, "Database");
             Directory.CreateDirectory(dbFolder);
 
+            // Same database file as the controller
             _dbPath = Path.Combine(dbFolder, "EventTable.db");
+
+            Console.WriteLine($"[DataBase.cs] Database Path: {_dbPath}");
+            Console.WriteLine($"[DataBase.cs] Database exists: {File.Exists(_dbPath)}");
 
             CreateTable();
         }
@@ -56,6 +62,7 @@ namespace VitaWave.DataBase
                 );";
             cmd.ExecuteNonQuery();
 
+            Console.WriteLine("[DataBase.cs] EventTable created/verified.");
         }
 
         public void HandleEventFromAlgo(object? s, ResultEvent e)
@@ -64,7 +71,6 @@ namespace VitaWave.DataBase
             con.Open();
 
             using var cmd = new SQLiteCommand(con);
-
             cmd.CommandText = "INSERT INTO EventTable(ModuleID, tid, event, criticality) VALUES(@m, @t, @e, @c)";
             cmd.Parameters.AddWithValue("@m", e.ModuleID);
             cmd.Parameters.AddWithValue("@t", e.TID);
@@ -74,9 +80,11 @@ namespace VitaWave.DataBase
             try
             {
                 cmd.ExecuteNonQuery();
+                Console.WriteLine($"[DataBase.cs] Event inserted: {e.ModuleID}, {e.TID}, {e.ResultId}");
             }
             catch (SQLiteException ex)
             {
+                Console.WriteLine($"[DataBase.cs] Insert failed: {ex.Message}");
             }
 
             // Optional: print all stored events
@@ -87,6 +95,7 @@ namespace VitaWave.DataBase
         public List<eventData> GetAllEvents()
         {
             var events = new List<eventData>();
+
             using var con = new SQLiteConnection(GetConnectionString());
             con.Open();
 
@@ -97,13 +106,14 @@ namespace VitaWave.DataBase
             {
                 events.Add(new eventData
                 {
-                    ModuleID = rdr["ModuleID"].ToString(),
-                    Tid = rdr["tid"].ToString(),
-                    Event = rdr["event"].ToString(),
+                    ModuleID = rdr["ModuleID"].ToString() ?? "",
+                    Tid = rdr["tid"].ToString() ?? "",
+                    Event = rdr["event"].ToString() ?? "",
                     Criticality = Convert.ToInt32(rdr["criticality"])
                 });
             }
 
+            Console.WriteLine($"[DataBase.cs] Retrieved {events.Count} events.");
             return events;
         }
     }

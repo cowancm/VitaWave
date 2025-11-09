@@ -1,0 +1,12 @@
+{
+  "TextSettings": {
+    "ServiceOn": false,
+    "ApiKey": "",
+    "Name": "Ashton Esquivel",
+    "Phone": "10digitphonenumber"
+  },
+  "PlaybackSettings": {
+    "Enabled": false,
+    "SaveInterval": 1
+  }
+}
