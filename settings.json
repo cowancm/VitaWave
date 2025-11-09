@@ -1,0 +1,9 @@
+{
+  "DataPortName": "",
+  "CliPortName": "",
+  "DataBaud": 921600,
+  "CliBaud": 115200,
+  "Identifier": "9ddb2f6400",
+  "API_Server_IP": "192.168.10.1",
+  "Port": 5000
+}

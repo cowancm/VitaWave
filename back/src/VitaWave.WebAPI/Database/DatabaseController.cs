@@ -142,7 +142,6 @@ public class DatabaseController : ControllerBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[DatabaseController] Error in ReadEvents: {ex.Message}");
             return StatusCode(500, $"Error reading events: {ex.Message}");
         }
     }

@@ -21,8 +21,6 @@ namespace VitaWave.DataBase
 
         public DataBase(DataFacilitator data)
         {
-            // Match the EXACT same path as DatabaseController
-            // C:\Users\Ashto\VitaWave\back\src\VitaWave.WebAPI\Database\EventTable.db
             var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var projectRoot = Path.Combine(userProfile, "VitaWave", "back", "src", "VitaWave.WebAPI");
 
@@ -34,9 +32,6 @@ namespace VitaWave.DataBase
 
             // Same database file as the controller
             _dbPath = Path.Combine(dbFolder, "EventTable.db");
-
-            Console.WriteLine($"[DataBase.cs] Database Path: {_dbPath}");
-            Console.WriteLine($"[DataBase.cs] Database exists: {File.Exists(_dbPath)}");
 
             CreateTable();
         }
@@ -62,7 +57,6 @@ namespace VitaWave.DataBase
                 );";
             cmd.ExecuteNonQuery();
 
-            Console.WriteLine("[DataBase.cs] EventTable created/verified.");
         }
 
         public void HandleEventFromAlgo(object? s, ResultEvent e)
@@ -80,11 +74,9 @@ namespace VitaWave.DataBase
             try
             {
                 cmd.ExecuteNonQuery();
-                Console.WriteLine($"[DataBase.cs] Event inserted: {e.ModuleID}, {e.TID}, {e.ResultId}");
             }
             catch (SQLiteException ex)
             {
-                Console.WriteLine($"[DataBase.cs] Insert failed: {ex.Message}");
             }
 
             // Optional: print all stored events
