@@ -17,14 +17,24 @@ namespace VitaWave.WebAPI.Hubs
             ChartHubSends.hubContext = chartHub;
         }
 
+        public static ResultEvent lastEvent = new()
+        {
+            Target = new()
+        };
+
         public async Task ModuleData(List<ResultEvent> results)
         {
             foreach (var resultEvent in results)
+            if (resultEvent.ResultId != lastEvent.ResultId) // bandaid for now
+            {
                 _dataFacilitator.Add(resultEvent);
+            }
 
             var points = results.Select(e => e.Target);
             if (points.Any())
                 await _chartHub.BroadcastUnfilteredPoints(points);
+
+            lastEvent = results.LastOrDefault(new ResultEvent() { Target = new() });
         }
 
         public async Task ModuleIdentifier(string identifier)
