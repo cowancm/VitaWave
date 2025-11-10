@@ -17,24 +17,14 @@ public class DatabaseController : ControllerBase
     {
         try
         {
-            // Get user profile path: C:\Users\Ashto
             var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var projectRoot = Path.Combine(userProfile, "vitawave");
 
-            // Build the path: C:\Users\Ashto\VitaWave\back\src\VitaWave.WebAPI
-            var projectRoot = Path.Combine(userProfile, "VitaWave", "back", "src", "VitaWave.WebAPI");
-
-            // Construct paths
             _dbPath = Path.Combine(projectRoot, "Database", "EventTable.db");
             _exportPath = Path.Combine(projectRoot, "Exports");
 
-            // Create database folder if missing
-            var dbFolder = Path.Combine(projectRoot, "Database");
-            if (!Directory.Exists(dbFolder))
-                Directory.CreateDirectory(dbFolder);
-
-            // Create export folder if missing
-            if (!Directory.Exists(_exportPath))
-                Directory.CreateDirectory(_exportPath);
+            Directory.CreateDirectory(Path.Combine(projectRoot, "Database"));
+            Directory.CreateDirectory(_exportPath);
 
             EnsureTableExists();
         }
@@ -47,19 +37,19 @@ public class DatabaseController : ControllerBase
 
     private void EnsureTableExists()
     {
-        // This creates the table if it doesn't exist
-        // Safe to call multiple times - won't overwrite existing data
         using var con = new SQLiteConnection($"Data Source={_dbPath}");
         con.Open();
 
         using var cmd = new SQLiteCommand(con);
+
+        // CHANGED: timestamp now stored as TEXT (string) instead of auto CURRENT_TIMESTAMP
         cmd.CommandText = @"
             CREATE TABLE IF NOT EXISTS EventTable (
                 ModuleID TEXT NOT NULL,
                 tid TEXT NOT NULL,
                 event TEXT NOT NULL,
                 criticality INTEGER CHECK(criticality BETWEEN 1 AND 10),
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                timestamp TEXT NOT NULL
             );";
         cmd.ExecuteNonQuery();
     }
@@ -78,6 +68,7 @@ public class DatabaseController : ControllerBase
         return Ok("Logging stopped.");
     }
 
+    // CHANGED: Now includes timestamp column
     [HttpPost("insert")]
     public IActionResult InsertEvent([FromBody] ResultEvent ev)
     {
@@ -88,12 +79,15 @@ public class DatabaseController : ControllerBase
         con.Open();
 
         using var cmd = new SQLiteCommand(con);
-        cmd.CommandText = @"INSERT INTO EventTable(ModuleID, tid, event, criticality) 
-                        VALUES(@m, @t, @e, @c)";
+
+        // Include timestamp field in insert
+        cmd.CommandText = @"INSERT INTO EventTable(ModuleID, tid, event, criticality, timestamp)
+                            VALUES(@m, @t, @e, @c, @ts)";
         cmd.Parameters.AddWithValue("@m", ev.ModuleID);
         cmd.Parameters.AddWithValue("@t", ev.TID);
         cmd.Parameters.AddWithValue("@e", ev.ResultId.ToString());
         cmd.Parameters.AddWithValue("@c", 1);
+        cmd.Parameters.AddWithValue("@ts", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
         try
         {
@@ -106,7 +100,6 @@ public class DatabaseController : ControllerBase
 
         return Ok(new { message = "Event inserted." });
     }
-
 
     [HttpPost("clear")]
     public IActionResult ClearDatabase()
@@ -131,9 +124,6 @@ public class DatabaseController : ControllerBase
         try
         {
             var events = GetFilteredEvents(tid, moduleId, evt, minCriticality, maxCriticality);
-            if (events.Count == 0)
-                return Ok(events);
-
             return Ok(events);
         }
         catch (Exception ex)
@@ -159,10 +149,10 @@ public class DatabaseController : ControllerBase
             return BadRequest("No data found for the given filters.");
 
         var sb = new StringBuilder();
-        sb.AppendLine("ModuleID,tid,event,criticality");
+        sb.AppendLine("ModuleID,tid,event,criticality,timestamp"); // CHANGED
         foreach (var row in filteredRows)
         {
-            sb.AppendLine($"{row.ModuleID},{row.Tid},{row.Event.Replace(",", ";")},{row.Criticality}");
+            sb.AppendLine($"{row.ModuleID},{row.Tid},{row.Event.Replace(",", ";")},{row.Criticality},{row.Timestamp}");
         }
 
         string filterTag = $"{(tid ?? "AllTids")}_{(moduleId ?? "AllModules")}_{DateTime.Now:yyyyMMdd_HHmmss}";
@@ -182,6 +172,7 @@ public class DatabaseController : ControllerBase
         return File(bytes, "text/csv", fileName);
     }
 
+    // CHANGED: SELECT now retrieves timestamp
     private List<eventData> GetFilteredEvents(
         string? tid, string? moduleId, string? evt, int? minCriticality, int? maxCriticality)
     {
@@ -189,7 +180,7 @@ public class DatabaseController : ControllerBase
         con.Open();
 
         var whereClause = BuildWhereClause(tid, moduleId, evt, minCriticality, maxCriticality, out var parameters);
-        var cmd = new SQLiteCommand($"SELECT ModuleID, tid, event, criticality FROM EventTable {whereClause}", con);
+        var cmd = new SQLiteCommand($"SELECT ModuleID, tid, event, criticality, timestamp FROM EventTable {whereClause}", con);
         foreach (var p in parameters) cmd.Parameters.Add(p);
 
         using var reader = cmd.ExecuteReader();
@@ -201,7 +192,8 @@ public class DatabaseController : ControllerBase
                 ModuleID = reader["ModuleID"].ToString() ?? "",
                 Tid = reader["tid"].ToString() ?? "",
                 Event = reader["event"].ToString() ?? "",
-                Criticality = Convert.ToInt32(reader["criticality"])
+                Criticality = Convert.ToInt32(reader["criticality"]),
+                Timestamp = reader["timestamp"].ToString() ?? "" // NEW
             });
         }
 

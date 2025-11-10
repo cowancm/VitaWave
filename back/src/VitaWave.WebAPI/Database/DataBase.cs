@@ -13,7 +13,9 @@ namespace VitaWave.DataBase
         public string Tid { get; set; } = "";
         public string Event { get; set; } = "";
         public int Criticality { get; set; }
+        public string Timestamp { get; set; } = "";
     }
+
 
     public class DataBase
     {
@@ -22,7 +24,7 @@ namespace VitaWave.DataBase
         public DataBase(DataFacilitator data)
         {
             var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var projectRoot = Path.Combine(userProfile, "VitaWave", "back", "src", "VitaWave.WebAPI");
+            var projectRoot = Path.Combine(userProfile, "vitawave");
 
             data.EventRaise += HandleEventFromAlgo;
 
@@ -48,13 +50,13 @@ namespace VitaWave.DataBase
 
             using var cmd = new SQLiteCommand(con);
             cmd.CommandText = @"
-                CREATE TABLE IF NOT EXISTS EventTable (
-                    ModuleID TEXT NOT NULL,
-                    tid TEXT NOT NULL,
-                    event TEXT NOT NULL,
-                    criticality INTEGER CHECK(criticality BETWEEN 1 AND 10),
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                );";
+            CREATE TABLE IF NOT EXISTS EventTable (
+                ModuleID TEXT NOT NULL,
+                tid TEXT NOT NULL,
+                event TEXT NOT NULL,
+                criticality INTEGER CHECK(criticality BETWEEN 1 AND 10),
+                timestamp TEXT NOT NULL
+            );";
             cmd.ExecuteNonQuery();
 
             Console.WriteLine("[DataBase.cs] Table created successfully.");
@@ -76,13 +78,13 @@ namespace VitaWave.DataBase
                 con.Open();
 
                 using var cmd = new SQLiteCommand(con);
-                cmd.CommandText = "INSERT INTO EventTable(ModuleID, tid, event, criticality) VALUES(@m, @t, @e, @c)";
+                cmd.CommandText = "INSERT INTO EventTable(ModuleID, tid, event, criticality, timestamp) VALUES(@m, @t, @e, @c, @ts)";
 
-                // Convert values to strings properly
                 cmd.Parameters.AddWithValue("@m", e.ModuleID ?? "Unknown");
                 cmd.Parameters.AddWithValue("@t", e.TID.ToString());
                 cmd.Parameters.AddWithValue("@e", e.ResultId.ToString());
                 cmd.Parameters.AddWithValue("@c", 1);
+                cmd.Parameters.AddWithValue("@ts", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
                 cmd.ExecuteNonQuery();
                 Console.WriteLine("[DataBase.cs] Event inserted successfully");
@@ -104,7 +106,7 @@ namespace VitaWave.DataBase
             using var con = new SQLiteConnection(GetConnectionString());
             con.Open();
 
-            using var cmd = new SQLiteCommand("SELECT ModuleID, tid, event, criticality FROM EventTable", con);
+            using var cmd = new SQLiteCommand("SELECT ModuleID, tid, event, criticality, timestamp FROM EventTable", con);
             using SQLiteDataReader rdr = cmd.ExecuteReader();
 
             while (rdr.Read())
@@ -114,12 +116,14 @@ namespace VitaWave.DataBase
                     ModuleID = rdr["ModuleID"].ToString() ?? "",
                     Tid = rdr["tid"].ToString() ?? "",
                     Event = rdr["event"].ToString() ?? "",
-                    Criticality = Convert.ToInt32(rdr["criticality"])
+                    Criticality = Convert.ToInt32(rdr["criticality"]),
+                    Timestamp = rdr["timestamp"].ToString() ?? ""
                 });
             }
 
             Console.WriteLine("[DataBase.cs] Retrieved " + events.Count + " events.");
             return events;
         }
+
     }
 }

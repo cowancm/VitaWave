@@ -1,0 +1,187 @@
+// enhanced-database.js - Fixed version for your HTML
+console.log('enhanced-database.js loaded');
+
+class DatabaseManager {
+    constructor() {
+        this.apiBaseUrl = "http://localhost:5000/Database";
+        this.initializeElements();
+        this.attachEventListeners();
+        this.startAutoRefresh();
+    }
+    
+    initializeElements() {
+        this.elements = {
+            saveCsvBtn: document.getElementById("saveCsv"),
+            output: document.getElementById("dataOutput"),
+            statusMsg: document.getElementById("statusMessage"),
+            lastUpdated: document.getElementById("dataLastUpdated")
+        };
+    }
+    
+    attachEventListeners() {
+        // Only attach if element exists
+        if (this.elements.saveCsvBtn) {
+            this.elements.saveCsvBtn.addEventListener("click", () => this.saveCsv());
+        }
+    }
+    
+    showMessage(msg, isError = false) {
+        if (this.elements.statusMsg) {
+            this.elements.statusMsg.innerHTML = `
+                <div class="status-message ${isError ? 'error' : 'success'}">
+                    <span>${isError ? '❌' : '✅'}</span>
+                    <span>${msg}</span>
+                </div>
+            `;
+        }
+        console.log(`[${isError ? 'ERROR' : 'SUCCESS'}] ${msg}`);
+    }
+    
+    updateTimestamp() {
+        if (this.elements.lastUpdated) {
+            const now = new Date();
+            const formatted = now.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            this.elements.lastUpdated.textContent = formatted;
+        }
+    }
+    
+    async readEvents() {
+        this.showMessage("Reading events...");
+        console.log(`Attempting to fetch: ${this.apiBaseUrl}/read`);
+        
+        try {
+            const res = await fetch(`${this.apiBaseUrl}/read`);
+            console.log('Response status:', res.status);
+            
+            if (!res.ok) {
+                throw new Error(`Read failed with status ${res.status}`);
+            }
+            
+            const data = await res.json();
+            console.log('Data received:', data);
+            
+            if (this.elements.output) {
+                // Format as a nice table
+                if (Array.isArray(data) && data.length > 0) {
+                    const tableHtml = this.formatDataAsTable(data);
+                    this.elements.output.innerHTML = tableHtml;
+                } else {
+                    this.elements.output.innerHTML = `
+                        <div style="color: var(--text-muted); padding: 2rem; text-align: center;">
+                            No events found in database
+                        </div>
+                    `;
+                }
+            }
+            
+            this.updateTimestamp();
+            this.showMessage(`Loaded ${Array.isArray(data) ? data.length : 0} events`);
+            
+        } catch (err) {
+            console.error('Fetch error:', err);
+            this.showMessage(`Error: ${err.message}`, true);
+        }
+    }
+    
+    formatDataAsTable(data) {
+        if (!data || data.length === 0) return '<p>No data</p>';
+        
+        // Get all unique keys from the data
+        const keys = Object.keys(data[0]);
+        
+        let html = `
+            <table style="width: 100%; border-collapse: collapse; color: var(--text-primary);">
+                <thead>
+                    <tr style="background: var(--bg-card-hover); border-bottom: 2px solid var(--border);">
+                        ${keys.map(key => `
+                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; color: var(--text-secondary);">
+                                ${key}
+                            </th>
+                        `).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map((row, idx) => `
+                        <tr style="border-bottom: 1px solid var(--border); ${idx % 2 === 0 ? 'background: var(--bg-dark);' : ''}">
+                            ${keys.map(key => `
+                                <td style="padding: 0.75rem; font-size: 0.875rem;">
+                                    ${this.formatValue(row[key])}
+                                </td>
+                            `).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        
+        return html;
+    }
+    
+    formatValue(value) {
+        if (value === null || value === undefined) return '<span style="color: var(--text-muted);">—</span>';
+        if (typeof value === 'object') return `<code style="font-size: 0.75rem;">${JSON.stringify(value)}</code>`;
+        if (typeof value === 'number') return value.toFixed(4);
+        return value;
+    }
+    
+    async saveCsv() {
+        this.showMessage("Generating CSV...");
+        console.log(`Attempting to download CSV from: ${this.apiBaseUrl}/save-csv`);
+        
+        try {
+            // Trigger download
+            window.location.href = `${this.apiBaseUrl}/save-csv`;
+            
+            // Show success after a short delay
+            setTimeout(() => {
+                this.showMessage("CSV download started");
+            }, 500);
+            
+        } catch (err) {
+            console.error('CSV download error:', err);
+            this.showMessage(`Error: ${err.message}`, true);
+        }
+    }
+    
+    startAutoRefresh() {
+        // Auto-refresh every 5 seconds when on the data tab
+        this.refreshInterval = setInterval(() => {
+            const dataTab = document.getElementById('dataTab');
+            if (dataTab && !dataTab.classList.contains('hidden')) {
+                console.log('Auto-refreshing data...');
+                this.readEvents();
+            }
+        }, 5000);
+        
+        // Initial load
+        setTimeout(() => {
+            const dataTab = document.getElementById('dataTab');
+            if (dataTab && !dataTab.classList.contains('hidden')) {
+                this.readEvents();
+            }
+        }, 500);
+    }
+    
+    updateApiUrl(newUrl) {
+        this.apiBaseUrl = newUrl;
+        console.log('Database API URL updated to:', newUrl);
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.databaseManager = new DatabaseManager();
+        console.log('✅ Database Manager initialized');
+    });
+} else {
+    window.databaseManager = new DatabaseManager();
+    console.log('✅ Database Manager initialized');
+}
