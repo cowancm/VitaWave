@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using System.Runtime.InteropServices;
+using VitaWave.Common;
 using VitaWave.Common.TLVs;
 using VitaWave.ModuleControl.Parsing.TLVs;
 using static VitaWave.ModuleControl.Parsing.TLVs.TLV_Constants;
@@ -25,17 +26,17 @@ namespace VitaWave.ModuleControl.Parsing
             return result;
         }
 
-        public static ParsingEvent? CreateEvent(Span<byte> tlvBuffer, FrameHeader frameHeader)
+        public static (EventPacket?, List<uint>?) CreateEvent(Span<byte> tlvBuffer, FrameHeader frameHeader)
         {
-            var resultingEvent = new ParsingEvent();
-            resultingEvent.CreationTime = DateTime.Now;
-            resultingEvent.FrameHeader = frameHeader;
-
+            var resultingEvent = new EventPacket();
+            List<uint>? targetIndices = null;
             var indexInTlvBuffer = 0;
             var numTlvsRead = 0;
 
             try //if the bytes fail to be read correctly, throw it out and turn it null
             {
+                List<TargetHeight>? heights = null;
+
                 while (numTlvsRead != frameHeader.NumTLVs)
                 {
                     var tlvHeader = TLVHeaderParser.GetHeaderTypeSize(tlvBuffer.Slice(indexInTlvBuffer, TLVHeaderParser.HEADER_LENGTH));
@@ -53,13 +54,13 @@ namespace VitaWave.ModuleControl.Parsing
                             resultingEvent.Targets = CreateTargets(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.TARGET_INDEX:
-                            resultingEvent.TargetIndices = CreateTargetIndices(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
+                            targetIndices = CreateTargetIndices(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.TARGET_HEIGHT:
-                            resultingEvent.Heights = CreateTargetHeights(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
+                            heights = CreateTargetHeights(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.PRESENCE_INDICATION:
-                            resultingEvent.PresenceIndication = CreateIsPresent(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
+                            resultingEvent.Presence = CreateIsPresent(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         default:
                             throw new ArgumentException("Bad TLV Header");
@@ -67,14 +68,26 @@ namespace VitaWave.ModuleControl.Parsing
                     indexInTlvBuffer += numBytesInThisTlv;
                     numTlvsRead++;
                 }
+
+                if (heights != null)
+                {
+                    if (heights?.Count == resultingEvent.Targets?.Count)
+                        for (int i = 0; i < heights!.Count; i++)
+                        {
+                            resultingEvent.Targets![i].TargetHeight = heights[i];
+                        }
+                    else
+                        throw new ArgumentException("Target heights count doesn't match target list count");
+                }
+                
             }
-            catch
+            catch (Exception ex) 
             {
+                Log.Error(ex, $"Error parsing TLV data: {ex.Message}");
                 resultingEvent = null;
-                //this gets logged upstream
             }
 
-            return resultingEvent;
+            return (resultingEvent, targetIndices);
         }
 
         #region PointCloud

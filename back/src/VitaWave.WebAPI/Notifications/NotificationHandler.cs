@@ -20,13 +20,16 @@ namespace VitaWave.WebAPI.Notifications
 
         public NotificationHandler(DataFacilitator dataProcessor)
         {
-            dataProcessor.EventRaise += DataProcessor_EventRaise;
+            dataProcessor.EventRaise += NotifyIfUrgent;
             settings = SettingsManager.GetSettings().TextSettings;
         }
 
-        private void DataProcessor_EventRaise(object? sender, Common.ResultEvent e)
+        private readonly List<ResultID> _resultsWorthNotifyingFor = new List<ResultID>() { ResultID.NonDetection10Hr, ResultID.Fall }; 
+
+        private void NotifyIfUrgent(object? sender, Common.ResultEvent e)
         {
-            if(!e.IsWorthNotifing)
+            // if not worth notifyin, don't notify
+            if(!_resultsWorthNotifyingFor.Contains(e.ResultId))
                 return;
 
             Log.Debug("Notification event raised!");

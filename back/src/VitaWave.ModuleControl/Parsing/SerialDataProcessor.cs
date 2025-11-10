@@ -2,6 +2,7 @@
 using Serilog;
 using System.Diagnostics;
 using VitaWave.Common;
+using VitaWave.ModuleControl.Data;
 using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing.TLVs;
@@ -23,12 +24,12 @@ namespace VitaWave.ModuleControl.Parsing
 
         private string _moduleID = "";
 
-        private readonly ISignalRClient _client;
+        private readonly ModuleTargetTracker _moduleTracker;
 
-        public SerialDataProcessor(ISignalRClient client)
+        public SerialDataProcessor(ModuleTargetTracker moduleTracker)
         {
-            _client = client;
             _moduleID = SettingsManager.GetConfigSettings().Identifier;
+            _moduleTracker = moduleTracker;
         }
 
         public void AddToQueue(byte[] buffer, FrameHeader header)
@@ -106,36 +107,14 @@ namespace VitaWave.ModuleControl.Parsing
             }
         }
 
-//        private async void CreateNewSendLast(byte[] tlvBuffer, FrameHeader header)
-//        {
-//            var e = FrameParser.CreateEvent(tlvBuffer, header);
-//            if (e != null) 
-//            {
-
-//                if (_client.Status == HubConnectionState.Connected)
-//                    _ = _client.SendDataAsync(new EventPacket(e.Points ?? new(),
-//                                                              e.Targets ?? new(),
-//                                                              e.Heights ?? new(),
-//                                                              e.PresenceIndication,
-//                                                              _moduleID));
-//#if DEBUG
-//                ConsoleHelpers.PrintTargetIndication(e);
-//#endif
-//            }
-//        }
-
-
-
-        ParsingEvent? _old;
-        long _olderMs;  // timestamp of packet before _old
-        long _lastMs;   // timestamp of _old
-        readonly Stopwatch sw = Stopwatch.StartNew();
+        EventPacket? _old;
         private void CreateNewSendLast(byte[] tlvBuffer, FrameHeader frameHeader)
         {
             try
             {
-                var newEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
-                var nowMs = sw.ElapsedMilliseconds;
+                var event_indices = FrameParser.CreateEvent(tlvBuffer, frameHeader);
+                var newEvent = event_indices.Item1;
+                var targetIndices = event_indices.Item2;
 
                 if (newEvent == null)
                 {
@@ -144,18 +123,18 @@ namespace VitaWave.ModuleControl.Parsing
                     return;
                 }
 
-                if (newEvent.TargetIndices != null)
+                if (targetIndices != null)
                 {
-                    if (_old?.Points?.Count != newEvent.TargetIndices.Count)
+                    if (_old?.Points?.Count != targetIndices.Count)
                     {
                         _old = null;
                         Log.Error("Frame target indices doesn't match expected number of points");
                         return;
                     }
 
-                    for (int i = 0; i < newEvent.TargetIndices.Count; i++)
+                    for (int i = 0; i < targetIndices.Count; i++)
                     {
-                        _old!.Points![i].TID = newEvent.TargetIndices[i];
+                        _old!.Points![i].TID = targetIndices[i];
                     }
                 }
 
@@ -164,25 +143,10 @@ namespace VitaWave.ModuleControl.Parsing
         #if DEBUG
                     ConsoleHelpers.PrintTargetIndication(newEvent);
         #endif
-                    if (_client.Status == HubConnectionState.Connected)
-                    {
-                        // Delta = time between _old and the one before it
-                        var delta = _lastMs - _olderMs;
-
-                        _ = _client.SendDataAsync(new EventPacket(
-                            _old.Points ?? new(),
-                            _old.Targets ?? new(),
-                            _old.Heights ?? new(),
-                            _old.PresenceIndication,
-                            delta
-                        ));
-                    }
+                    _moduleTracker.Add(newEvent);
                 }
 
-                // Shift timestamps forward
-                _olderMs = _lastMs; 
-                _lastMs = nowMs;    
-                _old = newEvent;    // prepare for next send
+                _old = newEvent;
             }
             catch (Exception e)
             {

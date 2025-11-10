@@ -12,7 +12,7 @@ namespace VitaWave.WebAPI.Settings
             "vitawave"
         );
 
-        private const string FILE_NAME = "settings.json";
+        private const string FILE_NAME = "server_settings.json";
         private static readonly string _filePath = Path.Combine(_folder, FILE_NAME);
 
         private static readonly JsonSerializerOptions _jsonOptions = new()

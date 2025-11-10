@@ -2,7 +2,7 @@
 using VitaWave.Data;
 using VitaWave.WebAPI.Hubs;
 using VitaWave.WebAPI.Notifications;
-
+using VitaWave.DataBase;
 var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration()
@@ -37,11 +37,13 @@ builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<DataFacilitator>();
 builder.Services.AddSingleton<NotificationHandler>();
+builder.Services.AddSingleton<DataBase>();
 
 
 var app = builder.Build();
 
 var notifier = app.Services.GetRequiredService<NotificationHandler>(); // just to make this guy instantiate off rip, otherwise, won't print out logs or make settings file
+var db = app.Services.GetRequiredService<DataBase>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

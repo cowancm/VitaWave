@@ -8,6 +8,14 @@ namespace VitaWave.Data
         public static List<PersonPoint> ToPersonPointSet(this EventPacket eventPacket)
         {
             var points = new List<PersonPoint>();
+            
+            for (int i = 0; i < eventPacket.Targets.Count; i++)
+            {
+                var target = (PersonPoint)eventPacket.Targets[i];
+                target.Status = $"Acceleration X: {eventPacket.Targets[i].AccX}m/s^2";
+                points.Add(target);
+            }
+
             points.AddRange(eventPacket.Targets);
             return points;
         }
