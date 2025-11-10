@@ -17,7 +17,7 @@ namespace VitaWave.WebAPI.Hubs
             ChartHubSends.hubContext = chartHub;
         }
 
-        public static ResultEvent lastEvent = new()
+        public static ResultEvent lastEvent { get; set; } = new()
         {
             Target = new()
         };
