@@ -125,7 +125,7 @@ namespace VitaWave.ModuleControl.Parsing
             var range = rangeUnit * (double)MemoryMarshal.Read<Int16>(data.Slice(4, 2));
             var point = new PointCloudPoint()
             {
-                X = range * Math.Sin(azimuth) * Math.Cos(elevation),
+                X = range * Math.Sin(azimuth) * Math.Cos(elevation) * -1,
                 Y = range * Math.Cos(azimuth) * Math.Cos(elevation),
                 Z = range * Math.Sin(elevation),
                 Doppler = dopplerUnit * (double)MemoryMarshal.Read<Int16>(data.Slice(2, 2)),
@@ -169,7 +169,7 @@ namespace VitaWave.ModuleControl.Parsing
             var target = new Target()
             {
                 TID = MemoryMarshal.Read<uint>(data.Slice(0, 4)),
-                X = MemoryMarshal.Read<float>(data.Slice(4, 4)),
+                X = MemoryMarshal.Read<float>(data.Slice(4, 4)) * -1,
                 Y = MemoryMarshal.Read<float>(data.Slice(8, 4)),
                 Z = MemoryMarshal.Read<float>(data.Slice(12, 4)),
                 VelX = MemoryMarshal.Read<float>(data.Slice(16, 4)),

@@ -134,7 +134,7 @@ class ResearchPlatformApp {
         if (!confirmed) return;
         
         this.settings = {
-            signalrUrl: 'https://localhost:5000/chart',
+            signalrUrl: 'http://localhost:5000/chart',
             databaseUrl: 'http://localhost:5000/Database'
         };
         
