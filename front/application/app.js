@@ -16,7 +16,7 @@ class ResearchPlatformApp {
             return JSON.parse(saved);
         }
         return {
-            signalrUrl: 'https://localhost:7187/web',
+            signalrUrl: 'http://localhost:5000/chart',
             databaseUrl: 'http://localhost:5000/Database'
         };
     }
@@ -134,7 +134,7 @@ class ResearchPlatformApp {
         if (!confirmed) return;
         
         this.settings = {
-            signalrUrl: 'https://localhost:7187/web',
+            signalrUrl: 'https://localhost:5000/chart',
             databaseUrl: 'http://localhost:5000/Database'
         };
         

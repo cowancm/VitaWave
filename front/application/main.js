@@ -16,8 +16,8 @@ function createWindow() {
             webSecurity: false // Allow CORS for development
         },
         backgroundColor: '#0f172a',
-        icon: path.join(__dirname, 'icon.png'),
-        title: 'Elderly Mobility Research Platform',
+        icon: path.join(__dirname, 'IMG_2231.png'),
+        title: 'VitaWave',
         show: false // Don't show until ready
     });
 
@@ -135,7 +135,7 @@ function createMenu() {
                         dialog.showMessageBox(mainWindow, {
                             type: 'info',
                             title: 'About',
-                            message: 'Elderly Mobility Research Platform',
+                            message: '',
                             detail: 'Version 2.0.0\n\nA professional research platform for tracking and analyzing elderly mobility patterns.\n\n© 2025 Research Team'
                         });
                     }

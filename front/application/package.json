@@ -1,7 +1,7 @@
 {
-  "name": "elderly-mobility-research-platform",
+  "name": "VitaWave",
   "version": "2.0.0",
-  "description": "Professional research platform for tracking elderly mobility patterns",
+  "description": "Research platform for tracking elderly mobility patterns",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -28,8 +28,8 @@
     "@microsoft/signalr": "^8.0.0"
   },
   "build": {
-    "appId": "com.research.elderly-mobility",
-    "productName": "Elderly Mobility Research Platform",
+    "appId": "VitaWave",
+    "productName": "VitaWave",
     "directories": {
       "output": "dist"
     },
