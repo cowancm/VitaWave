@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SQLite;
 
-public class ModuleUser
+public class UserData
 {
     public string ModuleID { get; set; } = "";
     public string Email { get; set; } = "";
@@ -10,11 +10,11 @@ public class ModuleUser
 
 [ApiController]
 [Route("[controller]")]
-public class ModuleUserController : ControllerBase
+public class UserDatabaseController : ControllerBase
 {
     private readonly string _dbPath;
 
-    public ModuleUserController()
+    public UserDatabaseController()
     {
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var projectRoot = Path.Combine(userProfile, "VitaWave", "back", "src", "VitaWave.WebAPI");
@@ -23,7 +23,7 @@ public class ModuleUserController : ControllerBase
         if (!Directory.Exists(dbFolder))
             Directory.CreateDirectory(dbFolder);
 
-        _dbPath = Path.Combine(dbFolder, "ModuleUser.db");
+        _dbPath = Path.Combine(dbFolder, "UserData.db");
 
         EnsureTableExists();
     }
@@ -35,7 +35,7 @@ public class ModuleUserController : ControllerBase
 
         using var cmd = new SQLiteCommand(con);
         cmd.CommandText = @"
-            CREATE TABLE IF NOT EXISTS ModuleUser (
+            CREATE TABLE IF NOT EXISTS UserData (
                 ModuleID TEXT PRIMARY KEY,
                 Email TEXT NOT NULL,
                 Password TEXT NOT NULL
@@ -45,13 +45,13 @@ public class ModuleUserController : ControllerBase
 
     // CREATE
     [HttpPost("create")]
-    public IActionResult CreateUser([FromBody] ModuleUser user)
+    public IActionResult CreateUser([FromBody] UserData user)
     {
         using var con = new SQLiteConnection($"Data Source={_dbPath}");
         con.Open();
 
         using var cmd = new SQLiteCommand(con);
-        cmd.CommandText = "INSERT INTO ModuleUser(ModuleID, Email, Password) VALUES(@m, @e, @p)";
+        cmd.CommandText = "INSERT INTO UserData(ModuleID, Email, Password) VALUES(@m, @e, @p)";
         cmd.Parameters.AddWithValue("@m", user.ModuleID);
         cmd.Parameters.AddWithValue("@e", user.Email);
         cmd.Parameters.AddWithValue("@p", user.Password);
@@ -71,17 +71,17 @@ public class ModuleUserController : ControllerBase
     [HttpGet("read")]
     public IActionResult ReadUsers()
     {
-        var list = new List<ModuleUser>();
+        var list = new List<UserData>();
 
         using var con = new SQLiteConnection($"Data Source={_dbPath}");
         con.Open();
 
-        using var cmd = new SQLiteCommand("SELECT ModuleID, Email, Password FROM ModuleUser", con);
+        using var cmd = new SQLiteCommand("SELECT ModuleID, Email, Password FROM UserData", con);
         using var reader = cmd.ExecuteReader();
 
         while (reader.Read())
         {
-            list.Add(new ModuleUser
+            list.Add(new UserData
             {
                 ModuleID = reader["ModuleID"].ToString() ?? "",
                 Email = reader["Email"].ToString() ?? "",
@@ -94,13 +94,13 @@ public class ModuleUserController : ControllerBase
 
     // UPDATE
     [HttpPut("update")]
-    public IActionResult UpdateUser([FromBody] ModuleUser user)
+    public IActionResult UpdateUser([FromBody] UserData user)
     {
         using var con = new SQLiteConnection($"Data Source={_dbPath}");
         con.Open();
 
         using var cmd = new SQLiteCommand(con);
-        cmd.CommandText = "UPDATE ModuleUser SET Email=@e, Password=@p WHERE ModuleID=@m";
+        cmd.CommandText = "UPDATE UserData SET Email=@e, Password=@p WHERE ModuleID=@m";
         cmd.Parameters.AddWithValue("@m", user.ModuleID);
         cmd.Parameters.AddWithValue("@e", user.Email);
         cmd.Parameters.AddWithValue("@p", user.Password);
@@ -118,7 +118,7 @@ public class ModuleUserController : ControllerBase
         con.Open();
 
         using var cmd = new SQLiteCommand(con);
-        cmd.CommandText = "DELETE FROM ModuleUser WHERE ModuleID=@m";
+        cmd.CommandText = "DELETE FROM UserData WHERE ModuleID=@m";
         cmd.Parameters.AddWithValue("@m", moduleID);
 
         int rows = cmd.ExecuteNonQuery();
