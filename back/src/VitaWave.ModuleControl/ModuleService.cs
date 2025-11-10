@@ -31,7 +31,6 @@ internal class ModuleService : BackgroundService
 #endif
             _serialProcessor.Run();
             await _signalRClient.StartAsync();
-            _signalRClient.SubscribeToModuleStatus(_moduleIO);
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
         catch (OperationCanceledException)
@@ -39,8 +38,12 @@ internal class ModuleService : BackgroundService
         }
         finally
         {
+#if DEBUG
             _consoleController.Stop();
+#endif
+
             _moduleIO.Stop();
+            _serialProcessor.Stop();
         }
     }
 }

@@ -8,6 +8,5 @@ namespace VitaWave.ModuleControl.Interfaces
         HubConnectionState Status { get; }
         public Task StartAsync();
         public Task SendDataAsync(object data);
-        public void SubscribeToModuleStatus(IModuleIO io);
     }
 }

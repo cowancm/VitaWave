@@ -84,21 +84,5 @@ namespace VitaWave.ModuleControl.Client
         {
             await _connection.SendAsync(SendModuleStatusName, SettingsManager.GetConfigSettings().Identifier ?? "Unknown");
         }
-
-        public void SubscribeToModuleStatus(IModuleIO io)
-        {
-            if (_IO is null)
-            {
-                _IO = io;
-            }
-
-            io.PropertyChanged += async (sender, args) =>
-            {
-                if (args.PropertyName == nameof(io.Status))
-                {
-                    //await SendModuleStatusAsync();
-                }
-            };
-        }
     }
 }

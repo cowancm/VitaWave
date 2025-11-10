@@ -3,32 +3,20 @@ using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using VitaWave.Common.TLVs;
 
 namespace VitaWave.Common
 {
     public class ResultEvent
     {
         public string ModuleID { get; set; } = "";
-        public int TID { get; set; }
+        public required PersonPoint Target { get; set; }
+        public ResultID ResultId { get; set; } = ResultID.Unknown;
 
-        private ResultID _resultId = ResultID.Unknown;
-
-        public ResultID ResultId
-        {
-            get => _resultId;
-            set
-            {
-                _resultId = value;
-
-                if (value == ResultID.Fall || value == ResultID.Inactive2Hr || value == ResultID.NonDetection10Hr)
-                    IsWorthNotifing = true;
-                else
-                    IsWorthNotifing = false;
-            }
-        }
-
-        public bool IsWorthNotifing { get; set; } = false;
+        [JsonIgnore]
+        public string TID => Target?.TID.ToString() ?? "Unknown";
 
         public ResultType GetTypeResult(ResultID enumId)
         {

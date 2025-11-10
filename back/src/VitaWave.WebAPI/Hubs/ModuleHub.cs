@@ -7,22 +7,24 @@ namespace VitaWave.WebAPI.Hubs
 {
     public class ModuleHub : Hub
     {
-        public readonly DataFacilitator _dataFacilitator;
         public readonly IHubContext<ChartHub> _chartHub;
-        public event EventHandler<object> Disconnected;
+        private readonly DataFacilitator _dataFacilitator;
 
-        public ModuleHub(DataFacilitator dataFacilitator, IHubContext<ChartHub> chartHub)
+        public ModuleHub(IHubContext<ChartHub> chartHub, DataFacilitator dataFacilitator)
         {
-            _dataFacilitator = dataFacilitator;
             _chartHub = chartHub;
+            _dataFacilitator = dataFacilitator;
             ChartHubSends.hubContext = chartHub;
         }
 
-        public async Task ModuleData(EventPacket dataPacket)
+        public async Task ModuleData(List<ResultEvent> results)
         {
-            _dataFacilitator.Add(dataPacket);
-            
-            // await _chartHub.BroadcastUnfilteredPoints(dataPacket.ToPersonPointSet());
+            foreach (var resultEvent in results)
+                _dataFacilitator.Add(resultEvent);
+
+            var points = results.Select(e => e.Target);
+            if (points.Any())
+                await _chartHub.BroadcastUnfilteredPoints(points);
         }
 
         public async Task ModuleIdentifier(string identifier)
@@ -34,12 +36,6 @@ namespace VitaWave.WebAPI.Hubs
         public override Task OnDisconnectedAsync(Exception? exception)
         {
             var moduleID = ModuleHubState.Remove(Context.ConnectionId);
-
-            if (moduleID != null)
-            {
-                _dataFacilitator.Clear(moduleID); //should clear alg buffer
-            }
-
             return base.OnDisconnectedAsync(exception);
         }
     }

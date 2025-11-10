@@ -1,4 +1,5 @@
 ﻿using System.IO.Ports;
+using VitaWave.Common;
 using VitaWave.ModuleControl.Parsing;
 
 namespace VitaWave.ModuleControl.Console
@@ -111,7 +112,7 @@ namespace VitaWave.ModuleControl.Console
             }
         }
 
-        public static void PrintTargetIndication(ParsingEvent? e)
+        public static void PrintTargetIndication(EventPacket? e)
         {
             if (e?.Targets?.Count > 0)
             {

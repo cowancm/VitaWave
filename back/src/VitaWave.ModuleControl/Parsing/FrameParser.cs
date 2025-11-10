@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using System.Runtime.InteropServices;
+using VitaWave.Common;
 using VitaWave.Common.TLVs;
 using VitaWave.ModuleControl.Parsing.TLVs;
 using static VitaWave.ModuleControl.Parsing.TLVs.TLV_Constants;
@@ -25,12 +26,10 @@ namespace VitaWave.ModuleControl.Parsing
             return result;
         }
 
-        public static ParsingEvent? CreateEvent(Span<byte> tlvBuffer, FrameHeader frameHeader)
+        public static (EventPacket?, List<uint>?) CreateEvent(Span<byte> tlvBuffer, FrameHeader frameHeader)
         {
-            var resultingEvent = new ParsingEvent();
-            resultingEvent.CreationTime = DateTime.Now;
-            resultingEvent.FrameHeader = frameHeader;
-
+            var resultingEvent = new EventPacket();
+            List<uint>? targetIndices = null;
             var indexInTlvBuffer = 0;
             var numTlvsRead = 0;
 
@@ -55,13 +54,13 @@ namespace VitaWave.ModuleControl.Parsing
                             resultingEvent.Targets = CreateTargets(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.TARGET_INDEX:
-                            resultingEvent.TargetIndices = CreateTargetIndices(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
+                            targetIndices = CreateTargetIndices(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.TARGET_HEIGHT:
                             heights = CreateTargetHeights(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.PRESENCE_INDICATION:
-                            resultingEvent.PresenceIndication = CreateIsPresent(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
+                            resultingEvent.Presence = CreateIsPresent(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         default:
                             throw new ArgumentException("Bad TLV Header");
@@ -88,7 +87,7 @@ namespace VitaWave.ModuleControl.Parsing
                 resultingEvent = null;
             }
 
-            return resultingEvent;
+            return (resultingEvent, targetIndices);
         }
 
         #region PointCloud

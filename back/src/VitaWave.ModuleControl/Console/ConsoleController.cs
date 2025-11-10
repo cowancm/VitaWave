@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
-using VitaWave.ModuleControl.Simulating;
 
 public class ConsoleController
 {
@@ -13,13 +12,11 @@ public class ConsoleController
 
     private readonly IModuleIO _moduleIO;
     private readonly ISignalRClient _signalRClient;
-    private readonly FakeDataPusher _fakeDataPusher;
 
     public ConsoleController(IModuleIO moduleIO, ISignalRClient client)
     {
         _moduleIO = moduleIO;
         _signalRClient = client;
-        _fakeDataPusher = new(client);
     }
 
     public void Start()
@@ -111,11 +108,6 @@ public class ConsoleController
                 status = _moduleIO.Pause();
                 Console.WriteLine($"Module attempted to be paused. \nStatus: {status}");
                 break;
-#if DEBUG
-            case "fake":
-                await ConsoleFakeDataSimulator.RunFakeDataSimLoop(token, _fakeDataPusher);
-                break;
-#endif
 
             case "exit":
                 Environment.Exit(0);

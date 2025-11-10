@@ -15,7 +15,6 @@ namespace VitaWave.WebAPI.Hubs
         public static void Add(string clientID, string moduleID)
         {
             clientID_moduleID.TryAdd(clientID, moduleID);
-
             Log.Debug($"Added client ID {clientID} with moduleID {moduleID}");
         }
 

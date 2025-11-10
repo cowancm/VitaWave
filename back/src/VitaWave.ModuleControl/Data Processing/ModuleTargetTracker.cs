@@ -10,17 +10,19 @@ using System.Threading.Tasks;
 using System.Xml.Serialization;
 using VitaWave.Common;
 using VitaWave.Common.TLVs;
-using VitaWave.WebAPI.Hubs;
+using VitaWave.ModuleControl.Interfaces;
+using VitaWave.ModuleControl.Settings;
 
-namespace VitaWave.Data
+namespace VitaWave.ModuleControl.Data
 {
     public class ModuleTargetTracker
     {
-        private event EventHandler<ResultEvent>? _algResultRaise;
         private Queue<EventPacket> _eventQueue = new();         // Used for initial filtering only BEFORE correlation
         private List<TrackedTarget> _trackedTargets = new();    // Used for correlation and algorithms
+        private List<ResultEvent> _resultsToSend = new();
         private string moduleID = "";
         private int MAX_EVENT_QUEUE_SIZE = 100;
+        private readonly ISignalRClient _client;
 
         // General constants
         const double ASSUMED_WALKING_SPEED_MPS = 1.1; // m/s
@@ -48,12 +50,12 @@ namespace VitaWave.Data
         // Movement constants
         private readonly double MOVEMENT_THRESHOLD_METERS_PER_FRAME = ASSUMED_WALKING_SPEED_MPS * NUM_MS_PER_FRAME_MILLISECONDS / 1000 * 2.0;
 
-        public ModuleTargetTracker(EventHandler<ResultEvent>? eventRaise, string moduleID)
+        public ModuleTargetTracker(ISignalRClient client)
         {
-            _algResultRaise = eventRaise;
             MIN_MOVEMENT_METERS_FOR_NEW = NUM_REQUIRED_HEIGHT_DELTAS * ASSUMED_WALKING_SPEED_MPS * NUM_MS_PER_FRAME_MILLISECONDS / 1000 * .5;
             MIN_NUMBER_TID_MENTIONS = MAX_EVENT_QUEUE_SIZE / 4;
-            this.moduleID = moduleID;
+            this.moduleID = SettingsManager.GetConfigSettings().Identifier;
+            _client = client;
         }
 
         object _lock = new object();
@@ -126,8 +128,9 @@ namespace VitaWave.Data
                 }
             }
 
-            _trackedTargets.ForEach(t => t.UpdatedThisFrame = false);
+            _resultsToSend.Clear();
 
+            _trackedTargets.ForEach(t => t.UpdatedThisFrame = false);
             // Run fall detection on all tracked targets
             foreach (var tracked in _trackedTargets)
             {
@@ -136,21 +139,18 @@ namespace VitaWave.Data
 
             if (_trackedTargets.Count > 0)
             {
-                var result = CheckStatus(_trackedTargets[0]); // Currently only tracking one target
-                NotifyIfStatusChanged(_trackedTargets[0], result);
+                for (int i = 0; i < _trackedTargets.Count; i++)
+                {
+                    var result = CheckStatus(_trackedTargets[i]); // Currently only tracking one target
+                    AddIfStatusChanged(_trackedTargets[i], result);
+                }
             }
 
-#if DEBUG
-            if (_trackedTargets.Count > 0)
+            // Send out all generated events
+            if (_resultsToSend.Count > 0)
             {
-                var points = _trackedTargets.Select(t => t.Target.Copy()).ToList();
-                foreach (var point in points)
-                {
-                    point.X = -1 * point.X;
-                }
-                ChartHubSends.hubContext!.BroadcastUnfilteredPoints(points);
+                _client.SendDataAsync(_resultsToSend);
             }
-#endif
         }
 
         private bool EntryFilter(Target target)
@@ -318,19 +318,18 @@ namespace VitaWave.Data
             tracked.PastTargetData.Add(target);
         }
 
-        private void Notify(ResultID e)
+        private void AddNewResultEvent(ResultID e, TrackedTarget t)
         {
             var ev = new ResultEvent
             {
                 ModuleID = moduleID,
-                TID = 1, // if we get more than one target going, change this
-                ResultId = e
+                ResultId = e,
+                Target = t.Target
             };
 
-            Task.Run(() =>
-            {
-                _algResultRaise?.Invoke(this, ev);
-            });
+            ev.Target.Status = ev.ResultId.ToString();
+
+            _resultsToSend.Add(ev);
         }
 
 
@@ -393,16 +392,7 @@ namespace VitaWave.Data
                             }
 
                             tracked.FallDetectedTime = DateTime.Now;
-
-                            Log.Information($"[FALL DETECTED] TID: {tracked.Target.TID}, " +
-                                            $"Height Drop: {heightDrop:F3}m, " +
-                                            $"Drop Rate: {dropRate:F3}m/frame, " +
-                                            $"Frames: {framesSinceDrop}, " +
-                                            $"Final Height: {currentHeight:F3}m, " +
-                                            $"Status: {(disappeared ? "Target Lost" : "Target Low")}");
-
-                            // Notify via event
-                            Notify(ResultID.Fall);
+                            AddNewResultEvent(ResultID.Fall, tracked);
                         }
                     }
                 }
@@ -451,15 +441,11 @@ namespace VitaWave.Data
             }
         }
 
-        private void NotifyIfStatusChanged(TrackedTarget tracked, ResultID newStatus)
+        private void AddIfStatusChanged(TrackedTarget tracked, ResultID newStatus)
         {
-            Log.Information($"Status: {newStatus.ToString()}");
-
-            tracked.Target.Status = newStatus.ToString();
-
             if (tracked.LastResultID != newStatus)
             {
-                Notify(newStatus);
+                AddNewResultEvent(newStatus, tracked);
             }
 
             tracked.LastResultID = newStatus;

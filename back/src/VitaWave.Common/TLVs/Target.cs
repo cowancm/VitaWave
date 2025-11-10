@@ -15,17 +15,5 @@ namespace VitaWave.Common.TLVs
         public float G { get; init; }
         public float ConfidenceLevel { get; init; }
         public TargetHeight TargetHeight { get; set; } = new();
-
-        public Target Copy()
-        {
-            return new Target()
-            {
-                X = this.X,
-                Y = this.Y,
-                TID = this.TID,
-                Status = this.Status,
-            };
-        }
-        
     }
 }
