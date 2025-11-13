@@ -34,6 +34,7 @@ namespace VitaWave.ModuleControl.Data
         const int RECORRELATION_FRAME_THRESHOLD = 50;
         private readonly int MIN_NUMBER_TID_MENTIONS;
         private readonly double MIN_MOVEMENT_METERS_FOR_NEW;
+        const int MAX_NUMBER_OF_PAST_DATA = 250;
 
         // Correlation constants
         const double POSITION_PROXIMITY_THRESHOLD = 1;
@@ -319,7 +320,11 @@ namespace VitaWave.ModuleControl.Data
             tracked.FrameCountSinceLastSeen = 0;
             tracked.LastSeen = DateTime.Now;
             tracked.UpdatedThisFrame = true;
-            tracked.PastTargetData.Add(target);
+            tracked.PastTargetData.Enqueue(target);
+            if (tracked.PastTargetData.Count()> MAX_NUMBER_OF_PAST_DATA)
+            {
+                tracked.PastTargetData.Dequeue();
+            }
         }
 
         private void AddNewResultEvent(ResultID e, TrackedTarget t)
@@ -471,7 +476,7 @@ namespace VitaWave.ModuleControl.Data
             public ResultID LastResultID { get; set; } = ResultID.Unknown;
             public DateTime LastSeen { get; set; } = DateTime.Now;
             public List<(int, double)> FrameCount_Height = new();
-            public List<Target> PastTargetData = new();
+            public Queue<Target> PastTargetData = new();
             public DateTime? FallDetectedTime { get; set; } = null;
 
             public TrackedTarget(Target target, float understoodHeight)

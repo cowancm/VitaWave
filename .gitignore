@@ -487,3 +487,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+/back/src/VitaWave.ModuleControl/Properties/launchSettings.json
+/server_settings.json
+/settings.json
