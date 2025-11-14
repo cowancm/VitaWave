@@ -145,8 +145,11 @@ namespace VitaWave.ModuleControl.Data
             }
 #else
             // Send out all generated events
-            _trackedTargets[0].Target.Status = _trackedTargets[0].LastResultID.ToString();
-            _client.SendDataAsync(new List<ResultEvent>()
+
+            if(usedTrackedTargets.Count > 0)
+            {
+                _trackedTargets[0].Target.Status = _trackedTargets[0].LastResultID.ToString();
+                _client.SendDataAsync(new List<ResultEvent>()
             {
                 new ResultEvent()
                 {
@@ -155,6 +158,7 @@ namespace VitaWave.ModuleControl.Data
                     Target = _trackedTargets[0].Target
                 }
             });
+            }
 #endif
         }
 
@@ -446,8 +450,6 @@ namespace VitaWave.ModuleControl.Data
                 var avgHeight = pastData.TakeLast(100).Average(x => x.TargetHeight.MaxZ);
                 var layingThreshold = .3 * tracked.UnderstoodHeight;
                 var sittingThreshold = .7 * tracked.UnderstoodHeight;
-                Log.Information($"avgHeight: {avgHeight}");
-                Log.Information($"understoodHeight: {tracked.UnderstoodHeight}");
                 if (avgHeight < layingThreshold)
                     return ResultID.Laying;
                 else if (avgHeight < sittingThreshold)
