@@ -138,28 +138,11 @@ namespace VitaWave.ModuleControl.Data
                     AddIfStatusChanged(_trackedTargets[i], result);
                 }
             }
-#if !DEBUG
+
             if (_resultsToSend.Count > 0)
             {
                 _client.SendDataAsync(_resultsToSend);
             }
-#else
-            // Send out all generated events
-
-            if(usedTrackedTargets.Count > 0)
-            {
-                _trackedTargets[0].Target.Status = _trackedTargets[0].LastResultID.ToString();
-                _client.SendDataAsync(new List<ResultEvent>()
-            {
-                new ResultEvent()
-                {
-                    ModuleID = moduleID,
-                    ResultId = _trackedTargets[0].LastResultID,
-                    Target = _trackedTargets[0].Target
-                }
-            });
-            }
-#endif
         }
 
         private bool EntryFilter(Target target)

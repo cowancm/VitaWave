@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.WebAPI", "src\Vita
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VitaWave.Common", "src\VitaWave.Common\VitaWave.Common.csproj", "{E7D735AE-E734-4CDC-B9D3-327084682E74}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgorithmTester", "src\AlgorithmTester\AlgorithmTester.csproj", "{BF166897-F8A2-4519-A556-69B5D43C518A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{E7D735AE-E734-4CDC-B9D3-327084682E74}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E7D735AE-E734-4CDC-B9D3-327084682E74}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E7D735AE-E734-4CDC-B9D3-327084682E74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF166897-F8A2-4519-A556-69B5D43C518A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF166897-F8A2-4519-A556-69B5D43C518A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF166897-F8A2-4519-A556-69B5D43C518A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF166897-F8A2-4519-A556-69B5D43C518A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
