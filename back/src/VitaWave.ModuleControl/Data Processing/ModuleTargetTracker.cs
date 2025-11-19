@@ -318,7 +318,11 @@ namespace VitaWave.ModuleControl.Data
             var tracked = _trackedTargets.First(t => t.Target.TID == trackedTargetToUpdate);
             target.TID = tracked.Target.TID; // Preserve TID
 
-            tracked.FrameCount_Height.Add((tracked.FrameCountSinceLastSeen, target.Z));
+            tracked.FrameCount_Height.Enqueue((tracked.FrameCountSinceLastSeen, target.Z));
+            if (tracked.FrameCount_Height.Count() > FALL_MAX_FRAMES + 1)
+            {
+                tracked.FrameCount_Height.Dequeue();
+            }
 
             tracked.Target = target;
             tracked.FrameCountSinceLastSeen = 0;
@@ -341,7 +345,6 @@ namespace VitaWave.ModuleControl.Data
             };
 
             ev.Target.Status = ev.ResultId.ToString();
-
             _resultsToSend.Add(ev);
         }
 
@@ -351,13 +354,10 @@ namespace VitaWave.ModuleControl.Data
         private void CheckForFall(TrackedTarget tracked)
         {
             // Need sufficient avgHeight history to detect falls
-            if (tracked.FrameCount_Height.Count < 2)
+            if (tracked.FrameCount_Height.Count < FALL_MAX_FRAMES)
                 return;
 
-            var recentHistory = tracked.FrameCount_Height.TakeLast(FALL_MAX_FRAMES).ToList();
-
-            if (recentHistory.Count < 2)
-                return;
+            var recentHistory = tracked.FrameCount_Height.ToList();
 
             // Find the maximum avgHeight in recent history
             var maxHeight = recentHistory.Max(h => h.Item2);
@@ -420,6 +420,15 @@ namespace VitaWave.ModuleControl.Data
             if (pastData.Count < 200)
                 return ResultID.Unknown;
 
+            if (tracked.FrameCountSinceLastSeen >= 36000)
+            {
+                return ResultID.NonDetection10Hr;
+            }
+            else if (tracked.FrameCountSinceLastSeen >= 7200) 
+            {
+                return ResultID.Inactive2Hr;
+            }
+
             var lastFrames = pastData.TakeLast(framesToConsider).ToList();
 
             var first = lastFrames.First();
@@ -429,19 +438,7 @@ namespace VitaWave.ModuleControl.Data
                 Math.Pow(last.Y - first.Y, 2));
             var neededDistanceForActive = .2;
 
-            if (tracked.FrameCountSinceLastSeen >= 36000)
-            {
-                return ResultID.NonDetection10Hr;
-            }
-            else if (tracked.FrameCountSinceLastSeen >= 7200) 
-            {
-                return ResultID.Inactive2Hr;
-            }
-            else if (tracked.FrameCountSinceLastSeen >= 75)
-            {
-                return ResultID.Standing;
-            }
-            else if (deltaaDistance >= neededDistanceForActive)
+            if (deltaaDistance >= neededDistanceForActive)
             {
                 return ResultID.Active;
             }
@@ -477,7 +474,7 @@ namespace VitaWave.ModuleControl.Data
             public int FrameCountSinceLastSeen { get; set; } = 0;
             public ResultID LastResultID { get; set; } = ResultID.Unknown;
             public DateTime LastSeen { get; set; } = DateTime.Now;
-            public List<(int, double)> FrameCount_Height = new();
+            public Queue<(int, double)> FrameCount_Height = new();
             public Queue<Target> PastTargetData = new();
             public DateTime? FallDetectedTime { get; set; } = null;
 
