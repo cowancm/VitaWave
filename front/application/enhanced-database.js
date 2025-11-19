@@ -12,6 +12,7 @@ class DatabaseManager {
     initializeElements() {
         this.elements = {
             saveCsvBtn: document.getElementById("saveCsv"),
+            clearDatabaseBtn: document.getElementById("clearDatabase"),
             output: document.getElementById("dataOutput"),
             statusMsg: document.getElementById("statusMessage"),
             lastUpdated: document.getElementById("dataLastUpdated")
@@ -22,6 +23,9 @@ class DatabaseManager {
         // Only attach if element exists
         if (this.elements.saveCsvBtn) {
             this.elements.saveCsvBtn.addEventListener("click", () => this.saveCsv());
+        }
+        if (this.elements.clearDatabaseBtn) {
+            this.elements.clearDatabaseBtn.addEventListener("click", () => this.clearDatabase());
         }
     }
     
@@ -35,6 +39,54 @@ class DatabaseManager {
             `;
         }
         console.log(`[${isError ? 'ERROR' : 'SUCCESS'}] ${msg}`);
+        
+        // Also show toast notification
+        this.showToast(msg, isError);
+    }
+    
+    showToast(message, isError = false) {
+        // Remove any existing toasts to prevent overlap
+        const existingToasts = document.querySelectorAll('.toast-notification');
+        existingToasts.forEach(toast => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        });
+        
+        // Create new toast
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.style.cssText = `
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            background: ${isError ? 'rgba(220, 38, 38, 0.95)' : 'rgba(16, 185, 129, 0.95)'};
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            animation: slideIn 0.3s ease;
+            backdrop-filter: blur(10px);
+        `;
+        toast.innerHTML = `
+            <span style="font-size: 1.25rem;">${isError ? '❌' : '✅'}</span>
+            <span>${message}</span>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(400px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
     }
     
     updateTimestamp() {
@@ -93,8 +145,11 @@ class DatabaseManager {
     formatDataAsTable(data) {
         if (!data || data.length === 0) return '<p>No data</p>';
         
+        // Reverse the data array to show newest first
+        const reversedData = [...data].reverse();
+        
         // Get all unique keys from the data
-        const keys = Object.keys(data[0]);
+        const keys = Object.keys(reversedData[0]);
         
         let html = `
             <table style="width: 100%; border-collapse: collapse; color: var(--text-primary);">
@@ -108,7 +163,7 @@ class DatabaseManager {
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.map((row, idx) => `
+                    ${reversedData.map((row, idx) => `
                         <tr style="border-bottom: 1px solid var(--border); ${idx % 2 === 0 ? 'background: var(--bg-dark);' : ''}">
                             ${keys.map(key => `
                                 <td style="padding: 0.75rem; font-size: 0.875rem;">
@@ -136,6 +191,16 @@ class DatabaseManager {
         console.log(`Attempting to download CSV from: ${this.apiBaseUrl}/save-csv`);
         
         try {
+            // First check if the server is reachable
+            const testResponse = await fetch(`${this.apiBaseUrl}/read`, {
+                method: 'HEAD',
+                signal: AbortSignal.timeout(5000) // 5 second timeout
+            }).catch(() => null);
+            
+            if (!testResponse || !testResponse.ok) {
+                throw new Error('Cannot connect to database server. Please check your connection and settings.');
+            }
+            
             // Trigger download
             window.location.href = `${this.apiBaseUrl}/save-csv`;
             
@@ -167,6 +232,76 @@ class DatabaseManager {
                 this.readEvents();
             }
         }, 500);
+    }
+    
+    async clearDatabase() {
+        // Show confirmation dialog with strong warning
+        const confirmed = confirm(
+            "⚠️ WARNING: PERMANENT DATA DELETION ⚠️\n\n" +
+            "This action will permanently delete ALL events from the database.\n\n" +
+            "This operation CANNOT be undone!\n\n" +
+            "Are you absolutely sure you want to proceed?"
+        );
+        
+        if (!confirmed) {
+            console.log('Database clear cancelled by user');
+            return;
+        }
+        
+        // Second confirmation
+        const doubleConfirm = confirm(
+            "⚠️ FINAL CONFIRMATION ⚠️\n\n" +
+            "Click OK to permanently delete all database records.\n" +
+            "Click Cancel to abort."
+        );
+        
+        if (!doubleConfirm) {
+            console.log('Database clear cancelled by user on second confirmation');
+            return;
+        }
+        
+        this.showMessage("Clearing database...");
+        console.log(`Attempting to clear database at: ${this.apiBaseUrl}/clear`);
+        
+        try {
+            const res = await fetch(`${this.apiBaseUrl}/clear`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log('Clear response status:', res.status);
+            
+            if (!res.ok) {
+                throw new Error(`Clear failed with status ${res.status}`);
+            }
+            
+            const result = await res.text();
+            console.log('Clear result:', result);
+            
+            this.showMessage("✅ Database cleared successfully");
+            
+            // Clear the output display
+            if (this.elements.output) {
+                this.elements.output.innerHTML = `
+                    <div style="color: var(--text-muted); padding: 2rem; text-align: center;">
+                        Database has been cleared. No events found.
+                    </div>
+                `;
+            }
+            
+            this.updateTimestamp();
+            
+            // Refresh data after a short delay
+            setTimeout(() => {
+                this.readEvents();
+            }, 1000);
+            
+        } catch (err) {
+            console.error('Clear database error:', err);
+            this.showMessage(`❌ Error clearing database: ${err.message}`, true);
+        }
     }
     
     updateApiUrl(newUrl) {

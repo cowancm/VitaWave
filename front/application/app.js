@@ -306,25 +306,46 @@ class ResearchPlatformApp {
         // Console log for debugging
         console.log(`[${isError ? 'ERROR' : 'INFO'}] ${message}`);
         
+        // Remove any existing notifications to prevent overlap
+        const existingNotifications = document.querySelectorAll('.toast-notification');
+        existingNotifications.forEach(notif => {
+            notif.style.opacity = '0';
+            notif.style.transform = 'translateX(400px)';
+            setTimeout(() => notif.remove(), 300);
+        });
+        
         // Visual toast notification
         const notification = document.createElement('div');
-        notification.className = `status-message ${isError ? 'error' : 'success'}`;
-        notification.style.position = 'fixed';
-        notification.style.top = '100px';
-        notification.style.right = '20px';
-        notification.style.zIndex = '9999';
-        notification.style.minWidth = '300px';
-        notification.style.animation = 'slideIn 0.3s ease';
+        notification.className = 'toast-notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            background: ${isError ? 'rgba(220, 38, 38, 0.95)' : 'rgba(16, 185, 129, 0.95)'};
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            animation: slideIn 0.3s ease;
+            backdrop-filter: blur(10px);
+        `;
         notification.innerHTML = `
-            <span>${isError ? '❌' : '✅'}</span>
+            <span style="font-size: 1.25rem;">${isError ? '❌' : '✅'}</span>
             <span>${message}</span>
         `;
         
         document.body.appendChild(notification);
         
         setTimeout(() => {
+            notification.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
             notification.style.opacity = '0';
-            notification.style.transition = 'opacity 0.3s ease';
+            notification.style.transform = 'translateX(400px)';
             setTimeout(() => notification.remove(), 300);
         }, 4000);
     }
