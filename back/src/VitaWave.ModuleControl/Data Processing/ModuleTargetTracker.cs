@@ -431,14 +431,16 @@ namespace VitaWave.ModuleControl.Data
 
             var lastFrames = pastData.TakeLast(framesToConsider).ToList();
 
-            var first = lastFrames.First();
-            var last = lastFrames.Last();
-            var deltaaDistance = Math.Sqrt(
-                Math.Pow(last.X - first.X, 2) +
-                Math.Pow(last.Y - first.Y, 2));
-            var neededDistanceForActive = .2;
+            var totalDistance = lastFrames
+                .Select((t, i) => Math.Sqrt(
+                    Math.Pow(t.X - lastFrames[i].X, 2) +
+                    Math.Pow(t.Y - lastFrames[i].Y, 2)))
+                .Sum();
 
-            if (deltaaDistance >= neededDistanceForActive)
+
+            var neededDistanceForActive = .3;
+
+            if (totalDistance >= neededDistanceForActive || tracked.Target.VelX > .4 || tracked.Target.VelY > .4)
             {
                 return ResultID.Active;
             }
