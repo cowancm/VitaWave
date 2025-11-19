@@ -53,5 +53,6 @@ namespace VitaWave.Common
         NonDetection10Hr = 20, // No detection for an extended period of time
         Inactive2Hr = 21, // Detected, but position more or less same for an extended period of time
         Fall = 30,
+        Static = 31
     }
 }
