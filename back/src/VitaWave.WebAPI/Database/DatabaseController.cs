@@ -163,11 +163,6 @@ public class DatabaseController : ControllerBase
         using var con = new SQLiteConnection($"Data Source={_dbPath}");
         con.Open();
 
-        var whereClause = BuildWhereClause(tid, moduleId, evt, minCriticality, maxCriticality, out var parameters);
-        var deleteCmd = new SQLiteCommand($"DELETE FROM EventTable {whereClause}", con);
-        foreach (var p in parameters) deleteCmd.Parameters.Add(p);
-        deleteCmd.ExecuteNonQuery();
-
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
         return File(bytes, "text/csv", fileName);
     }
