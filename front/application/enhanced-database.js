@@ -191,27 +191,45 @@ class DatabaseManager {
         console.log(`Attempting to download CSV from: ${this.apiBaseUrl}/save-csv`);
         
         try {
-            // First check if the server is reachable
-            const testResponse = await fetch(`${this.apiBaseUrl}/read`, {
-                method: 'HEAD',
-                signal: AbortSignal.timeout(5000) // 5 second timeout
-            }).catch(() => null);
+            // Try to fetch the CSV with a timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
             
-            if (!testResponse || !testResponse.ok) {
+            const response = await fetch(`${this.apiBaseUrl}/save-csv`, {
+                signal: controller.signal
+            }).catch(err => {
+                clearTimeout(timeoutId);
                 throw new Error('Cannot connect to database server. Please check your connection and settings.');
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`Server returned error: ${response.status}`);
             }
             
-            // Trigger download
-            window.location.href = `${this.apiBaseUrl}/save-csv`;
+            // Get the blob data
+            const blob = await response.blob();
             
-            // Show success after a short delay
-            setTimeout(() => {
-                this.showMessage("CSV download started");
-            }, 500);
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `events_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            this.showMessage("✅ CSV downloaded successfully");
             
         } catch (err) {
             console.error('CSV download error:', err);
-            this.showMessage(`Error: ${err.message}`, true);
+            if (err.name === 'AbortError') {
+                this.showMessage('Connection timeout. Please check if the server is running.', true);
+            } else {
+                this.showMessage(`Error: ${err.message}`, true);
+            }
         }
     }
     
