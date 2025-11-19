@@ -28,6 +28,11 @@ internal class ModuleService : BackgroundService
         {
 #if DEBUG
             _consoleController.Start();
+#else
+            _moduleIO.InitializePorts();
+            await Task.Delay(1000);
+            await _moduleIO.TryWriteConfigToModule();
+            _moduleIO.Run();
 #endif
             _serialProcessor.Run();
             await _signalRClient.StartAsync();
@@ -41,7 +46,6 @@ internal class ModuleService : BackgroundService
 #if DEBUG
             _consoleController.Stop();
 #endif
-
             _moduleIO.Stop();
             _serialProcessor.Stop();
         }
