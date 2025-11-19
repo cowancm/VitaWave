@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 using System.Xml.Serialization;
 using VitaWave.Common;
 using VitaWave.Common.TLVs;
@@ -41,7 +42,7 @@ namespace VitaWave.ModuleControl.Data
         const double HEIGHT_PROXIMITY_THRESHOLD = .3;
 
         // Fall detection constants
-        const double FALL_HEIGHT_DROP_THRESHOLD = 0.4; // meters - minimum drop to consider as fall
+        const double FALL_HEIGHT_DROP_THRESHOLD = .5; // meters - minimum drop to consider as fall
         const int FALL_MAX_FRAMES = 20; // maximum frames over which a fall can occur
         const double FALL_RATE_THRESHOLD = 0.03; // meters per frame minimum rate
         const double LOW_HEIGHT_THRESHOLD = 0.3; // meters - avgHeight considered "on ground"
@@ -125,10 +126,10 @@ namespace VitaWave.ModuleControl.Data
 
             _trackedTargets.ForEach(t => t.UpdatedThisFrame = false);
             // Run fall detection on all tracked targets
-            foreach (var tracked in _trackedTargets)
-            {
-                CheckForFall(tracked);
-            }
+            // foreach (var tracked in _trackedTargets)
+            // {
+            //     CheckForFall(tracked);
+            // }
 
             if (_trackedTargets.Count > 0)
             {
@@ -138,7 +139,7 @@ namespace VitaWave.ModuleControl.Data
                     AddIfStatusChanged(_trackedTargets[i], result);
                 }
             }
-#if !DEBUG
+#if DEBUG
             if (_resultsToSend.Count > 0)
             {
                 _client.SendDataAsync(_resultsToSend);
@@ -361,7 +362,7 @@ namespace VitaWave.ModuleControl.Data
 
             // Find the maximum avgHeight in recent history
             var maxHeight = recentHistory.Max(h => h.Item2);
-            var currentHeight = tracked.Target.Z;
+            var currentHeight = tracked.Target.TargetHeight.MaxZ;
             var heightDrop = maxHeight - currentHeight;
 
             // Check if there was a significant drop
@@ -414,47 +415,44 @@ namespace VitaWave.ModuleControl.Data
 
         private ResultID CheckStatus(TrackedTarget tracked)
         {
-            var pastData = tracked.PastTargetData;
-            var framesToConsider = 20;
+            var pastData = tracked.PastTargetData.ToList();
 
             if (pastData.Count < 200)
-                return ResultID.Unknown;
+                return tracked.LastResultID;
 
-            if (tracked.FrameCountSinceLastSeen >= 36000)
+            if (tracked.FrameCountSinceLastSeen >= 36000 * 18) // 10000ms / 55ms = 18 or 18 frames per second
             {
                 return ResultID.NonDetection10Hr;
             }
-            else if (tracked.FrameCountSinceLastSeen >= 7200) 
+            else if (tracked.FrameCountSinceLastSeen >= 7200 * 18) 
             {
                 return ResultID.Inactive2Hr;
             }
+            else if (tracked.FrameCountSinceLastSeen >= 75)
+            {
+                if (tracked.LastResultID == ResultID.Active)
+                    tracked.PastTargetData.Clear();
+                return ResultID.Standing;
+            }
 
-            var lastFrames = pastData.TakeLast(framesToConsider).ToList();
-
-            var totalDistance = lastFrames
+            var totalDistance = pastData.Skip(1)
                 .Select((t, i) => Math.Sqrt(
-                    Math.Pow(t.X - lastFrames[i].X, 2) +
-                    Math.Pow(t.Y - lastFrames[i].Y, 2)))
+                    Math.Pow(t.X - pastData[i].X, 2) +
+                    Math.Pow(t.Y - pastData[i].Y, 2)))
                 .Sum();
 
 
-            var neededDistanceForActive = .3;
+            var neededDistanceForActive = .5;
 
-            if (totalDistance >= neededDistanceForActive || tracked.Target.VelX > .4 || tracked.Target.VelY > .4)
+            if (totalDistance >= neededDistanceForActive)
             {
                 return ResultID.Active;
             }
             else
             {
-                var avgHeight = pastData.TakeLast(100).Average(x => x.TargetHeight.MaxZ);
-                var layingThreshold = .3 * tracked.UnderstoodHeight;
-                var sittingThreshold = .7 * tracked.UnderstoodHeight;
-                if (avgHeight < layingThreshold)
-                    return ResultID.Laying;
-                else if (avgHeight < sittingThreshold)
-                    return ResultID.Sitting;
-                else
-                    return ResultID.Standing;
+                if (tracked.LastResultID == ResultID.Active)
+                    tracked.PastTargetData.Clear();
+                return ResultID.Standing;
             }
         }
 
