@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitaWave</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #10b981;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px var(--shadow);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .header-title {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .header-title p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 1.25rem;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #6b7280;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background: var(--secondary);
+            box-shadow: 0 0 12px var(--secondary);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .settings-btn {
+            padding: 0.625rem 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .settings-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            background: var(--bg-card);
+            padding: 0.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 0.875rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9375rem;
+        }
+
+        .nav-tab:hover {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 16px var(--shadow);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Visualization Tab */
+        .viz-container {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 2rem;
+        }
+
+        .chart-card {
+            position: relative;
+        }
+
+        #chartCanvas {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .legend-card {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .legend-card::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .legend-card::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+            border-radius: 4px;
+        }
+
+        .legend-card::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem;
+            margin-bottom: 0.5rem;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .legend-item:hover {
+            background: var(--bg-card-hover);
+            transform: translateX(4px);
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .legend-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .legend-tid {
+            font-weight: 600;
+            font-size: 0.9375rem;
+            color: var(--text-primary);
+        }
+
+        .legend-status {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        /* Data Controls */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            padding: 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9375rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9375rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-success {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        /* Data View */
+        .data-view {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-height: 400px;
+            max-height: 600px;
+            overflow: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.875rem;
+        }
+
+        .data-view::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        .data-view::-webkit-scrollbar-track {
+            background: var(--bg-card);
+            border-radius: 6px;
+        }
+
+        .data-view::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 6px;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9375rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .status-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--secondary);
+        }
+
+        .status-message.error {
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            color: var(--danger);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 40px var(--shadow);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .close-modal:hover {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .info-card {
+            background: var(--bg-dark);
+            padding: 1.25rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .info-label {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .timestamp {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+                <div class="logo" style="background: transparent; overflow: hidden;">
+                    <img src="IMG_2231.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+            <div class="header-title">
+                <h1>VitaWave</h1>
+                <p>Real-time Position Tracking & Analysis</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="connection-status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <button class="settings-btn" id="settingsBtn">⚙️ Settings</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="visualization">📊 Visualization</button>
+            <button class="nav-tab" data-tab="data">📋 Data Management</button>
+        </nav>
+
+        <!-- Visualization Tab -->
+        <div id="visualizationTab" class="tab-content">
+            <div class="viz-container">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Participant Position Tracking</h2>
+                    </div>
+                    <canvas id="chartCanvas" width="800" height="600"></canvas>
+                    <div class="timestamp">
+                        Last updated: <span id="lastUpdated">--</span>
+                    </div>
+                </div>
+
+                <div class="card legend-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Active Participants</h2>
+                    </div>
+                    <div id="legendItems"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Management Tab -->
+        <div id="dataTab" class="tab-content hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Event Database</h2>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--text-muted); font-size: 0.875rem;" id="autoRefreshStatus">Auto-refresh: ON</span>
+                        <div class="status-dot connected" id="dataRefreshIndicator"></div>
+                    </div>
+                </div>
+                <div id="statusMessage"></div>
+                <div id="dataOutput" class="data-view"></div>
+                <div class="timestamp">
+                    Last refreshed: <span id="dataLastUpdated">--</span>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 2rem;">
+                <div class="card-header">
+                    <h2 class="card-title">Database Actions</h2>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="saveCsv">💾 Export CSV</button>
+                    <button class="btn btn-danger" id="clearDatabase">🗑️ Clear Database</button>
+                </div>
+                <div style="background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); color: #fca5a5; padding: 0.75rem; border-radius: 8px; margin-top: 1rem; font-size: 0.875rem;">
+                    ⚠️ <strong>Warning:</strong> Clearing the database will permanently delete all stored events. This action cannot be undone.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">⚙️ Settings</h2>
+                <button class="close-modal" id="closeSettings">×</button>
+            </div>
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--secondary); padding: 0.75rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem;">
+                ℹ️ Settings are saved automatically and will persist when you reopen the application.
+            </div>
+            <div class="form-group">
+                <label class="form-label">SignalR Hub URL</label>
+                <input type="text" class="form-input" id="signalrUrl" placeholder="http://localhost:5000/chart">
+                <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem;">
+                    Current: <span id="currentSignalrUrl" style="font-family: monospace;">Loading...</span>
+                </div>
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Database API URL</label>
+                <input type="text" class="form-input" id="databaseUrl" placeholder="http://localhost:5000/Database">
+                <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem;">
+                    Current: <span id="currentDatabaseUrl" style="font-family: monospace;">Loading...</span>
+                </div>
+            </div>
+            <div class="btn-group" style="margin-top: 1.5rem; justify-content: flex-end;">
+                <button class="btn btn-warning" id="resetSettings">🔄 Reset to Default</button>
+                <button class="btn btn-primary" id="saveSettings">💾 Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="node_modules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="enhanced-chart.js"></script>
+    <script src="enhanced-database.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // Fix settings modal
+        document.addEventListener('DOMContentLoaded', () => {
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsModal = document.getElementById('settingsModal');
+            const closeSettings = document.getElementById('closeSettings');
+            
+            if (settingsBtn) {
+                settingsBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Settings button clicked');
+                    
+                    // Update current settings display when modal opens
+                    const saved = localStorage.getItem('researchPlatformSettings');
+                    if (saved) {
+                        const settings = JSON.parse(saved);
+                        document.getElementById('currentSignalrUrl').textContent = settings.signalrUrl || 'Not set';
+                        document.getElementById('currentDatabaseUrl').textContent = settings.databaseUrl || 'Not set';
+                    } else {
+                        document.getElementById('currentSignalrUrl').textContent = 'Using defaults';
+                        document.getElementById('currentDatabaseUrl').textContent = 'Using defaults';
+                    }
+                    
+                    settingsModal.classList.add('active');
+                });
+            }
+            
+            if (closeSettings) {
+                closeSettings.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    settingsModal.classList.remove('active');
+                });
+            }
+            
+            if (settingsModal) {
+                settingsModal.addEventListener('click', (e) => {
+                    if (e.target === settingsModal) {
+                        settingsModal.classList.remove('active');
+                    }
+                });
+            }
+        });
+        
+        // Fix tab switching - ensure it works immediately
+        document.addEventListener('DOMContentLoaded', () => {
+            const navTabs = document.querySelectorAll('.nav-tab');
+            const visualizationTab = document.getElementById('visualizationTab');
+            const dataTab = document.getElementById('dataTab');
+            
+            navTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.dataset.tab;
+                    
+                    // Update active tab button
+                    navTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Show/hide tab content
+                    visualizationTab.classList.toggle('hidden', tabName !== 'visualization');
+                    dataTab.classList.toggle('hidden', tabName !== 'data');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

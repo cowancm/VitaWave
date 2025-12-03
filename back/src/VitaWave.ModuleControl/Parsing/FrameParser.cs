@@ -1,7 +1,9 @@
-﻿using System.Runtime.InteropServices;
+﻿using Serilog;
+using System.Runtime.InteropServices;
+using VitaWave.Common;
+using VitaWave.Common.TLVs;
 using VitaWave.ModuleControl.Parsing.TLVs;
 using static VitaWave.ModuleControl.Parsing.TLVs.TLV_Constants;
-using VitaWave.Common.TLVs;
 
 namespace VitaWave.ModuleControl.Parsing
 {
@@ -24,17 +26,17 @@ namespace VitaWave.ModuleControl.Parsing
             return result;
         }
 
-        public static ParsingEvent? CreateEvent(Span<byte> tlvBuffer, FrameHeader frameHeader)
+        public static (EventPacket?, List<uint>?) CreateEvent(Span<byte> tlvBuffer, FrameHeader frameHeader)
         {
-            var resultingEvent = new ParsingEvent();
-            resultingEvent.CreationTime = DateTime.Now;
-            resultingEvent.FrameHeader = frameHeader;
-
+            var resultingEvent = new EventPacket();
+            List<uint>? targetIndices = null;
             var indexInTlvBuffer = 0;
             var numTlvsRead = 0;
 
             try //if the bytes fail to be read correctly, throw it out and turn it null
             {
+                List<TargetHeight>? heights = null;
+
                 while (numTlvsRead != frameHeader.NumTLVs)
                 {
                     var tlvHeader = TLVHeaderParser.GetHeaderTypeSize(tlvBuffer.Slice(indexInTlvBuffer, TLVHeaderParser.HEADER_LENGTH));
@@ -52,13 +54,13 @@ namespace VitaWave.ModuleControl.Parsing
                             resultingEvent.Targets = CreateTargets(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.TARGET_INDEX:
-                            resultingEvent.TargetIndices = CreateTargetIndices(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
+                            targetIndices = CreateTargetIndices(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.TARGET_HEIGHT:
-                            resultingEvent.Heights = CreateTargetHeights(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
+                            heights = CreateTargetHeights(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         case TLV_TYPE.PRESENCE_INDICATION:
-                            resultingEvent.PresenceIndication = CreateIsPresent(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
+                            resultingEvent.Presence = CreateIsPresent(tlvBuffer.Slice(indexInTlvBuffer, numBytesInThisTlv));
                             break;
                         default:
                             throw new ArgumentException("Bad TLV Header");
@@ -66,14 +68,26 @@ namespace VitaWave.ModuleControl.Parsing
                     indexInTlvBuffer += numBytesInThisTlv;
                     numTlvsRead++;
                 }
+
+                if (heights != null)
+                {
+                    if (heights?.Count == resultingEvent.Targets?.Count)
+                        for (int i = 0; i < heights!.Count; i++)
+                        {
+                            resultingEvent.Targets![i].TargetHeight = heights[i];
+                        }
+                    else
+                        throw new ArgumentException("Target heights count doesn't match target list count");
+                }
+                
             }
-            catch
+            catch (Exception ex) 
             {
+                Log.Error(ex, $"Error parsing TLV data: {ex.Message}");
                 resultingEvent = null;
-                //this gets logged upstream
             }
 
-            return resultingEvent;
+            return (resultingEvent, targetIndices);
         }
 
         #region PointCloud
@@ -81,10 +95,10 @@ namespace VitaWave.ModuleControl.Parsing
         private const int LENGTH_PER_POINT_CLOUD = 8;
         private const int LENGTH_PER_POINT_UNITS = 20;
 
-        private static List<ParsedPoint> CreatePointCloud(Span<byte> data)
+        private static List<PointCloudPoint> CreatePointCloud(Span<byte> data)
         {
             var numPoints = (data.Length - LENGTH_PER_POINT_UNITS) / LENGTH_PER_POINT_CLOUD; //first couple bytes are the point unit, then the rest are points
-            var points = new List<ParsedPoint>();
+            var points = new List<PointCloudPoint>();
 
             var elevationUnit = MemoryMarshal.Read<float>(data.Slice(0, 4));
             var azmithUnit = MemoryMarshal.Read<float>(data.Slice(4, 4));
@@ -104,14 +118,14 @@ namespace VitaWave.ModuleControl.Parsing
             return points;
         }
 
-        private static ParsedPoint CreatePoint(Span<byte> data, float elevationUnit, float azimuthUnit, float dopplerUnit, float rangeUnit, float snrUnit)
+        private static PointCloudPoint CreatePoint(Span<byte> data, float elevationUnit, float azimuthUnit, float dopplerUnit, float rangeUnit, float snrUnit)
         {
             var elevation = elevationUnit * (double)(sbyte)data[0];
             var azimuth = azimuthUnit * (double)(sbyte)data[1];
             var range = rangeUnit * (double)MemoryMarshal.Read<Int16>(data.Slice(4, 2));
-            var point = new ParsedPoint()
+            var point = new PointCloudPoint()
             {
-                X = range * Math.Sin(azimuth) * Math.Cos(elevation),
+                X = range * Math.Sin(azimuth) * Math.Cos(elevation) * -1,
                 Y = range * Math.Cos(azimuth) * Math.Cos(elevation),
                 Z = range * Math.Sin(elevation),
                 Doppler = dopplerUnit * (double)MemoryMarshal.Read<Int16>(data.Slice(2, 2)),
@@ -155,7 +169,7 @@ namespace VitaWave.ModuleControl.Parsing
             var target = new Target()
             {
                 TID = MemoryMarshal.Read<uint>(data.Slice(0, 4)),
-                X = MemoryMarshal.Read<float>(data.Slice(4, 4)),
+                X = MemoryMarshal.Read<float>(data.Slice(4, 4)) * -1,
                 Y = MemoryMarshal.Read<float>(data.Slice(8, 4)),
                 Z = MemoryMarshal.Read<float>(data.Slice(12, 4)),
                 VelX = MemoryMarshal.Read<float>(data.Slice(16, 4)),
@@ -210,16 +224,21 @@ namespace VitaWave.ModuleControl.Parsing
 
         private static TargetHeight CreateTargetHeight(Span<byte> data)
         {
+            // Log.Information("Raw data (hex): {HexData}", Convert.ToHexString(data));
 
             var targetHeight = new TargetHeight()
             {
-                TargetID = MemoryMarshal.Read<uint>(data.Slice(0, 4)),
+                TargetID = (uint)BitConverter.ToInt32(data.Slice(0, 4)),
                 MaxZ = MemoryMarshal.Read<float>(data.Slice(4, 4)),
-                MinZ = MemoryMarshal.Read<float>(data.Slice(8, 4))
+                MinZ = MemoryMarshal.Read<float>(data.Slice(8, 4)),
             };
+
+            // Log.Information("Parsed TargetHeight -> ID: {TargetID}, MaxZ: {MaxZ}, MinZ: {MinZ}",
+            //    targetHeight.TargetID, targetHeight.MaxZ, targetHeight.MinZ); thank you chatgpt for helping me debug this one
 
             return targetHeight;
         }
+
         #endregion
 
         #region Presence Indication

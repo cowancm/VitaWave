@@ -1,9 +1,12 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Serilog;
+using System.Diagnostics;
 using VitaWave.Common;
+using VitaWave.ModuleControl.Data;
 using VitaWave.ModuleControl.Console;
 using VitaWave.ModuleControl.Interfaces;
 using VitaWave.ModuleControl.Parsing.TLVs;
+using VitaWave.ModuleControl.Settings;
 
 namespace VitaWave.ModuleControl.Parsing
 {
@@ -11,7 +14,7 @@ namespace VitaWave.ModuleControl.Parsing
     {
         public bool IsRunning => _worker != null || _worker != Task.CompletedTask;
 
-        private (byte[] Buffer, FrameHeader Header)[] _frameBuffer = new (byte[], FrameHeader)[50];
+        private (byte[] Buffer, FrameHeader Header)[] _frameBuffer = new (byte[], FrameHeader)[100];
         private int _writeIndex = 0;
         private int _readIndex = 0;
         private bool _bufferFull = false;
@@ -19,11 +22,14 @@ namespace VitaWave.ModuleControl.Parsing
         private SemaphoreSlim _signal = new SemaphoreSlim(0);
         private CancellationTokenSource? _cts = null;
 
-        private readonly ISignalRClient _client;
+        private string _moduleID = "";
 
-        public SerialDataProcessor(ISignalRClient client)
+        private readonly ModuleTargetTracker _moduleTracker;
+
+        public SerialDataProcessor(ModuleTargetTracker moduleTracker)
         {
-            _client = client;
+            _moduleID = SettingsManager.GetConfigSettings().Identifier;
+            _moduleTracker = moduleTracker;
         }
 
         public void AddToQueue(byte[] buffer, FrameHeader header)
@@ -101,52 +107,45 @@ namespace VitaWave.ModuleControl.Parsing
             }
         }
 
-
-
-        ParsingEvent? _old;
-        /// <summary>
-        /// Target indices come from frame n+1 for frame n, therefore, we wait for the next frame so we can get this data, and 
-        /// apply them to the old object before we ship the old object out. So every frame is sent on the next call of this fn.
-        /// If there are failures, we apply null where need be so we don't confuse later data aggregation. Basically, if it's bad
-        /// data, we nuke this one and the last
-        /// </summary>
-        /// <param name="tlvBuffer"></param>
-        /// <param name="frameHeader"></param>
-        private async void CreateNewSendLast(byte[] tlvBuffer, FrameHeader frameHeader)
+        EventPacket? _old;
+        private void CreateNewSendLast(byte[] tlvBuffer, FrameHeader frameHeader)
         {
             try
             {
-                var newEvent = FrameParser.CreateEvent(tlvBuffer, frameHeader);
+                var event_indices = FrameParser.CreateEvent(tlvBuffer, frameHeader);
+                var newEvent = event_indices.Item1;
+                var targetIndices = event_indices.Item2;
+
                 if (newEvent == null)
                 {
                     _old = null;
                     Log.Error("Resultant frame is null");
                     return;
                 }
-                if (newEvent.TargetIndices != null)
+
+                if (targetIndices != null)
                 {
-                    if (_old?.Points?.Count != newEvent.TargetIndices.Count)
+                    if (_old?.Points?.Count != targetIndices.Count)
                     {
                         _old = null;
                         Log.Error("Frame target indices doesn't match expected number of points");
                         return;
                     }
-                    for (int i = 0; i < newEvent.TargetIndices.Count; i++)
+
+                    for (int i = 0; i < targetIndices.Count; i++)
                     {
-                        _old!.Points![i].TID = newEvent.TargetIndices[i];
+                        _old!.Points![i].TID = targetIndices[i];
                     }
                 }
+
                 if (_old != null)
                 {
-                    if (_client.Status == HubConnectionState.Connected)
-                    {
-                        _ = _client.SendDataAsync(new EventPacket(_old.Points ?? new(),
-                                                                _old.Targets ?? new(),
-                                                                _old.Heights ?? new(),
-                                                                _old.PresenceIndication));
-                        ConsoleHelpers.PrintTargetIndication(newEvent);
-                    }
+        #if DEBUG
+                    ConsoleHelpers.PrintTargetIndication(newEvent);
+        #endif
+                    _moduleTracker.Add(newEvent);
                 }
+
                 _old = newEvent;
             }
             catch (Exception e)

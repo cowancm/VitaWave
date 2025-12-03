@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scatter Chart Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a url('background.png') center/cover no-repeat;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 3rem;
+        }
+
+        .connection-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+            .connection-panel input {
+                flex: 1;
+                padding: 0.75rem;
+                border: 1px solid #4b5563;
+                border-radius: 0.5rem;
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+                font-size: 0.875rem;
+            }
+
+                .connection-panel input::placeholder {
+                    color: #9ca3af;
+                }
+
+            .connection-panel button {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: 0.5rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+
+        .connect-button {
+            background: #2563eb;
+            color: white;
+        }
+
+            .connect-button:hover:not(:disabled) {
+                background: #1d4ed8;
+            }
+
+            .connect-button:disabled {
+                background: #6b7280;
+                cursor: not-allowed;
+            }
+
+        .disconnect-button {
+            background: #dc2626;
+            color: white;
+        }
+
+            .disconnect-button:hover {
+                background: #b91c1c;
+            }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6b7280;
+        }
+
+            .status-indicator.connected {
+                background: #22c55e;
+                box-shadow: 0 0 10px #22c55e;
+            }
+
+        .status-text {
+            color: #d1d5db;
+            font-size: 0.875rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab-button {
+            padding: 1rem 2rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 1rem 1rem 0 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            .tab-button.active {
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+            }
+
+            .tab-button:not(.active) {
+                background: rgba(75, 85, 99, 0.5);
+                color: #d1d5db;
+            }
+
+                .tab-button:not(.active):hover {
+                    background: rgba(75, 85, 99, 0.7);
+                }
+
+        .content {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 1rem;
+            padding: 2.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 1200px;
+            min-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .graph-container {
+            display: flex;
+            gap: 2rem;
+            width: 100%;
+        }
+
+        #chartCanvas {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+        }
+
+        .legend {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+            min-width: 250px;
+        }
+
+            .legend h3 {
+                color: white;
+                margin-bottom: 1rem;
+                font-size: 1.125rem;
+            }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            color: #d1d5db;
+            font-size: 0.875rem;
+        }
+
+        .legend-color {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 0.25rem;
+        }
+
+        .timestamp {
+            margin-top: 1.5rem;
+            background: rgba(31, 41, 55, 0.6);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            color: #d1d5db;
+            font-size: 0.875rem;
+        }
+
+        .test-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            width: 100%;
+        }
+
+            .test-panel h3 {
+                color: white;
+                margin-bottom: 1rem;
+                font-size: 1.125rem;
+            }
+
+        .test-inputs {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+            .input-group label {
+                color: #d1d5db;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+
+            .input-group input {
+                padding: 0.5rem;
+                border: 1px solid #4b5563;
+                border-radius: 0.5rem;
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+            }
+
+                .input-group input[type="text"],
+                .input-group input[type="number"] {
+                    width: 150px;
+                }
+
+                .input-group input::placeholder {
+                    color: #9ca3af;
+                }
+
+        .add-point-button {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            background: #10b981;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            .add-point-button:hover {
+                background: #059669;
+            }
+
+        .clear-button {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            background: #f59e0b;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            .clear-button:hover {
+                background: #d97706;
+            }
+
+        .data-view {
+            width: 100%;
+            min-height: 400px;
+            max-height: 500px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #4b5563;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow: auto;
+            margin: 1rem 0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .export-button {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            .export-button.csv {
+                background: #16a34a;
+                color: white;
+            }
+
+                .export-button.csv:hover {
+                    background: #15803d;
+                }
+
+        .hidden {
+            display: none;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Connection Panel -->
+    <div class="connection-panel">
+        <input type="text"
+               id="signalrUrl"
+               placeholder="SignalR Hub URL (e.g., https://localhost:7187/web)"
+               value="https://localhost:7187/web" />
+        <button class="connect-button" id="connectButton">Connect</button>
+        <button class="disconnect-button hidden" id="disconnectButton">Disconnect</button>
+        <div class="status-indicator" id="statusIndicator"></div>
+        <span class="status-text" id="statusText">Disconnected</span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-button active" data-tab="graph">Graph</button>
+        <button class="tab-button" data-tab="data">Data</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <!-- Graph Tab -->
+        <div id="graphTab">
+            <div class="graph-container">
+                <canvas id="chartCanvas" width="700" height="500"></canvas>
+                <div class="legend">
+                    <h3>Legend</h3>
+                    <div id="legendItems"></div>
+                </div>
+            </div>
+            <div class="timestamp">
+                Last updated at: <span id="lastUpdated">--</span>
+            </div>
+
+            <!-- Test Panel -->
+            <div class="test-panel">
+                <h3>Test Point Input</h3>
+                <div class="test-inputs">
+                    <div class="input-group">
+                        <label for="testX">X (-5 to 5)</label>
+                        <input type="number" id="testX" step="0.1" value="0" min="-5" max="5" />
+                    </div>
+                    <div class="input-group">
+                        <label for="testY">Y (0 to 10)</label>
+                        <input type="number" id="testY" step="0.1" value="5" min="0" max="10" />
+                    </div>
+                    <div class="input-group">
+                        <label for="testTid">TID</label>
+                        <input type="number" id="testTid" value="1" min="1" />
+                    </div>
+                    <div class="input-group">
+                        <label for="testStatus">Status</label>
+                        <input type="text" id="testStatus" value="test" />
+                    </div>
+                    <button class="add-point-button" id="addPointButton">Add Point</button>
+                    <button class="clear-button" id="clearPointsButton">Clear All</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Tab -->
+        <div id="dataTab" class="hidden">
+            <!-- Filter Panel -->
+            <div class="test-panel" style="margin-top: 0;">
+                <h3>Filter Events</h3>
+                <div class="filter-grid">
+                    <div class="input-group">
+                        <label for="filterTid">TID</label>
+                        <input type="text" id="filterTid" placeholder="e.g., 12345" />
+                    </div>
+                    <div class="input-group">
+                        <label for="filterModuleId">Module ID</label>
+                        <input type="text" id="filterModuleId" placeholder="e.g., TestModule" />
+                    </div>
+                    <div class="input-group">
+                        <label for="filterEvent">Event</label>
+                        <input type="text" id="filterEvent" placeholder="e.g., TestEvent" />
+                    </div>
+                    <div class="input-group">
+                        <label for="filterMinCrit">Min Criticality</label>
+                        <input type="number" id="filterMinCrit" min="1" max="10" placeholder="1-10" />
+                    </div>
+                    <div class="input-group">
+                        <label for="filterMaxCrit">Max Criticality</label>
+                        <input type="number" id="filterMaxCrit" min="1" max="10" placeholder="1-10" />
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button id="readEvents" class="add-point-button">Read Events</button>
+                    <button id="clearFilters" class="clear-button">Clear Filters</button>
+                </div>
+            </div>
+
+            <!-- Status message -->
+            <div id="statusMessage" style="margin: 1rem 0; color: #d1d5db; font-size: 0.875rem;"></div>
+
+            <!-- Data output -->
+            <div id="dataOutput" class="data-view"></div>
+
+            <!-- Control Panel -->
+            <div class="test-panel">
+                <h3>Backend Controls</h3>
+                <div class="button-group">
+                    <button id="startLogging" class="add-point-button">Start Logging</button>
+                    <button id="stopLogging" class="clear-button">Stop Logging</button>
+                    <button id="insertEvent" class="add-point-button">Insert Test Event</button>
+                    <button id="clearDatabase" class="clear-button">Clear Database</button>
+                    <button id="saveCsv" class="export-button csv">Save as CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="node_modules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="chart.js"></script>
+    <script src="database.js"></script>
+    <script>
+        // Tab switching logic
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const graphTab = document.getElementById('graphTab');
+        const dataTab = document.getElementById('dataTab');
+        const lastUpdatedEl = document.getElementById('lastUpdated');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tab = button.dataset.tab;
+
+                // Update active states
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                // Show/hide tabs
+                if (tab === 'graph') {
+                    graphTab.classList.remove('hidden');
+                    dataTab.classList.add('hidden');
+                    lastUpdatedEl.textContent = new Date().toLocaleString();
+                } else {
+                    graphTab.classList.add('hidden');
+                    dataTab.classList.remove('hidden');
+                }
+            });
+        });
+
+        // Initialize timestamp
+        lastUpdatedEl.textContent = new Date().toLocaleString();
+    </script>
+</body>
+</html>

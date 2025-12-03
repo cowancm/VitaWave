@@ -17,18 +17,25 @@ internal class ModuleService : BackgroundService
         _signalRClient = client;
         _serialProcessor = serialProcessor;
         _moduleIO = moduleIO;
+#if DEBUG
         _consoleController = new ConsoleController(moduleIO, client);
+#endif
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
+#if DEBUG
             _consoleController.Start();
+#else
+            _moduleIO.InitializePorts();
+            await Task.Delay(1000);
+            await _moduleIO.TryWriteConfigToModule();
+            _moduleIO.Run();
+#endif
             _serialProcessor.Run();
             await _signalRClient.StartAsync();
-            _signalRClient.SubscribeToModuleStatus(_moduleIO);
-
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
         catch (OperationCanceledException)
@@ -36,8 +43,11 @@ internal class ModuleService : BackgroundService
         }
         finally
         {
+#if DEBUG
             _consoleController.Stop();
+#endif
             _moduleIO.Stop();
+            _serialProcessor.Stop();
         }
     }
 }

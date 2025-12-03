@@ -14,10 +14,10 @@ namespace VitaWave.Common
         public const uint UNKNOWN_TID = 255;
 
         [JsonPropertyName("x")]
-        public required float X { get; set; }
+        public float X { get; set; }
 
         [JsonPropertyName("y")]
-        public required float Y { get; set; }
+        public float Y { get; set; }
 
         [JsonPropertyName("tid")]
         public uint TID { get; set; } = UNKNOWN_TID; // Unknown
