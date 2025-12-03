@@ -3,6 +3,9 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+#front end build fiels
+front/application/out
+
 # project spesific files
 runtimesettings.json
 
@@ -113,7 +116,7 @@ StyleCopReport.xml
 _Chutzpah*
 
 # Visual C++ cache files
-ipch/
+ipch
 *.aps
 *.ncb
 *.opendb
